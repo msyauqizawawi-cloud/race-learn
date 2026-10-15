@@ -1,0 +1,2998 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Race & Learn: Pendidikan Islam Tahun 6 (2026)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Orbitron:wght@500;700;900&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Scheherazade+New:wght@600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      background-color: #050814;
+      overflow: hidden;
+    }
+    .font-arcade {
+      font-family: 'Orbitron', monospace;
+    }
+    .font-jawi {
+      font-family: 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', serif;
+      direction: rtl;
+    }
+    .neon-text-gold {
+      text-shadow: 0 0 10px rgba(251, 191, 36, 0.8), 0 0 20px rgba(245, 158, 11, 0.5);
+    }
+    .neon-text-cyan {
+      text-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(14, 165, 233, 0.5);
+    }
+    .neon-box-cyan {
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.4), inset 0 0 15px rgba(6, 182, 212, 0.2);
+    }
+    .neon-box-green {
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+    }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    /* Animasi kelajuan */
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.8; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.03); }
+    }
+    .pulse-glow {
+      animation: pulseGlow 2s infinite ease-in-out;
+    }
+    /* Penyesuaian Kanvas Perlumbaan */
+    #raceCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+    /* Touch controls styling */
+    .touch-btn {
+      touch-action: none;
+    }
+  </style>
+</head>
+<body class="w-screen h-screen text-white relative">
+
+  <div id="gameCanvasContainer" class="absolute inset-0 z-0 bg-slate-950 overflow-hidden">
+    <canvas id="raceCanvas"></canvas>
+  </div>
+
+  <div id="hudOverlay" class="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-3 md:p-6 hidden">
+    <!-- Bar Atas: Statistik Lumba Real-Time -->
+    <div class="flex justify-between items-start w-full">
+      <div class="flex flex-col gap-2">
+        <div class="glass-panel px-4 py-2 rounded-xl flex items-center gap-3 border-l-4 border-emerald-400">
+          <div class="text-xl md:text-2xl">❤️</div>
+          <div id="hudHearts" class="text-red-500 font-bold text-lg md:text-xl tracking-wider">❤️❤️❤️</div>
+        </div>
+        <div class="glass-panel px-4 py-2 rounded-xl flex items-center gap-3 border-l-4 border-cyan-400">
+          <span class="text-cyan-400 font-arcade text-xs">WORLD:</span>
+          <span id="hudLevelTitle" class="font-bold text-xs md:text-sm text-white">LEVEL 1</span>
+        </div>
+      </div>
+
+      <!-- Meter Kelajuan & Jarak -->
+      <div class="flex flex-col items-center">
+        <div class="glass-panel px-5 py-2 rounded-2xl text-center border-t-2 border-cyan-500">
+          <div class="text-[10px] uppercase font-arcade tracking-widest text-slate-400">Speed</div>
+          <div id="hudSpeed" class="text-2xl md:text-4xl font-black font-arcade text-cyan-300">0 <span class="text-xs font-normal text-slate-400">KM/H</span></div>
+        </div>
+        <!-- Progress Bar Checkpoint -->
+        <div class="w-36 md:w-56 bg-slate-900/80 h-3 rounded-full mt-2 p-0.5 border border-white/20 overflow-hidden">
+          <div id="hudProgressBar" class="h-full bg-gradient-to-r from-cyan-400 via-amber-400 to-emerald-400 rounded-full transition-all duration-100" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Syiling & Markah -->
+      <div class="flex flex-col items-end gap-2">
+        <div class="glass-panel px-4 py-2 rounded-xl flex items-center gap-2 border-r-4 border-amber-400">
+          <span class="text-xl md:text-2xl animate-bounce">🪙</span>
+          <span id="hudCoins" class="font-arcade text-lg md:text-2xl font-bold text-amber-300">0</span>
+        </div>
+        <div class="glass-panel px-4 py-1.5 rounded-xl flex items-center gap-2">
+          <span class="text-[10px] font-arcade text-slate-400">SCORE</span>
+          <span id="hudScore" class="font-arcade text-sm md:text-base font-bold text-emerald-400">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bar Bawah: Boost Meter & Butang Kawalan Kiri / Kanan -->
+    <div class="w-full flex flex-col gap-2 relative">
+      <!-- Status Kelajuan / Auto-Drive -->
+      <div class="self-center flex items-center gap-2 glass-panel px-3.5 py-1 rounded-full border border-cyan-500/30">
+        <span class="text-cyan-400 font-arcade text-[10px] md:text-xs">⚡ AUTO-DRIVE ACTIVE</span>
+        <div class="w-24 md:w-44 bg-slate-800 h-2 rounded-full overflow-hidden p-0.5 border border-slate-700">
+          <div id="hudBoostBar" class="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 rounded-full transition-all duration-150" style="width: 100%;"></div>
+        </div>
+        <span id="hudBoostText" class="text-[9px] md:text-[10px] font-arcade text-emerald-300">CRUISE</span>
+      </div>
+
+      <!-- Butang Kawalan Skrin Sebelah-Menyebelah di Bahagian Kiri Bawah (Left & Right Clustered) -->
+      <div class="pointer-events-auto flex items-end justify-between w-full px-3 sm:px-6 pb-2 pt-1 select-none">
+        <!-- Container Butang Kiri & Kanan Bersebelahan di Kiri Bawah -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- BUTANG KIRI -->
+          <button id="touchLeft" type="button" aria-label="Steer Left" class="touch-btn group relative flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 py-2.5 sm:px-5 sm:py-3.5 rounded-2xl glass-panel border-2 border-cyan-400/60 active:border-cyan-300 text-cyan-300 shadow-lg shadow-cyan-500/25 active:bg-cyan-500/30 active:scale-95 transition-all cursor-pointer min-w-[95px] sm:min-w-[125px] h-[52px] sm:h-[62px]">
+            <span class="text-xl sm:text-2xl font-black drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] group-active:-translate-x-1 transition-transform">◀</span>
+            <span class="font-arcade font-black text-xs sm:text-sm tracking-wider text-white group-active:text-cyan-200">KIRI</span>
+            <div class="absolute inset-0 rounded-2xl bg-cyan-400/10 pointer-events-none group-active:bg-cyan-400/25 transition-colors"></div>
+          </button>
+
+          <!-- BUTANG KANAN (Sebelah Kiri) -->
+          <button id="touchRight" type="button" aria-label="Steer Right" class="touch-btn group relative flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 py-2.5 sm:px-5 sm:py-3.5 rounded-2xl glass-panel border-2 border-cyan-400/60 active:border-cyan-300 text-cyan-300 shadow-lg shadow-cyan-500/25 active:bg-cyan-500/30 active:scale-95 transition-all cursor-pointer min-w-[95px] sm:min-w-[125px] h-[52px] sm:h-[62px]">
+            <span class="font-arcade font-black text-xs sm:text-sm tracking-wider text-white group-active:text-cyan-200">KANAN</span>
+            <span class="text-xl sm:text-2xl font-black drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] group-active:translate-x-1 transition-transform">▶</span>
+            <div class="absolute inset-0 rounded-2xl bg-cyan-400/10 pointer-events-none group-active:bg-cyan-400/25 transition-colors"></div>
+          </button>
+        </div>
+
+        <!-- Peringatan Kawalan Keyboard untuk PC (Di sebelah kanan bawah) -->
+        <div class="hidden lg:flex items-center gap-2 text-[10px] text-slate-400 font-arcade bg-slate-900/60 px-3 py-1.5 rounded-full border border-slate-800">
+          <span>Kekunci: <kbd class="px-1.5 py-0.5 bg-slate-800 rounded border border-slate-700 text-white">←</kbd> / <kbd class="px-1.5 py-0.5 bg-slate-800 rounded border border-slate-700 text-white">→</kbd></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay Countdown 3-2-1-GO -->
+  <div id="countdownOverlay" class="absolute inset-0 z-40 flex items-center justify-center pointer-events-none hidden">
+    <div id="countdownText" class="font-arcade font-black text-7xl md:text-9xl text-amber-300 drop-shadow-[0_0_35px_rgba(251,191,36,0.9)] animate-pulse">
+      3
+    </div>
+  </div>
+
+  <div id="homeScreen" class="absolute inset-0 z-20 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+    <div class="max-w-xl w-full glass-panel rounded-3xl p-6 md:p-8 border border-white/20 shadow-2xl flex flex-col items-center text-center relative overflow-hidden">
+      <div class="absolute -top-24 -left-24 w-48 h-48 bg-cyan-500/20 rounded-full blur-3xl"></div>
+      <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl"></div>
+      
+      <!-- Logo Tajuk -->
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-950/80 border border-cyan-400/40 text-cyan-300 text-xs font-arcade tracking-widest mb-3">
+        SESI 2026 • KSSR SEMAKAN
+      </div>
+      <h1 class="text-3xl md:text-5xl font-black font-arcade tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-500 neon-text-gold">
+        🏎️ RACE & LEARN
+      </h1>
+      <p class="text-sm md:text-base font-semibold text-emerald-400 font-arcade mt-1">PENDIDIKAN ISLAM TAHUN 6</p>
+      <p class="text-xs text-slate-300 mt-2 max-w-sm italic">"Race. Learn. Upgrade. Master."</p>
+
+      <!-- Input Nama Murid -->
+      <div class="w-full mt-6 text-left">
+        <label class="block text-xs font-arcade text-slate-300 mb-2 uppercase">👤 Nama Pelumba / Murid:</label>
+        <input type="text" id="playerNameInput" maxlength="25" placeholder="Masukkan nama anda..." value="Pelumba Bestari" 
+          class="w-full px-4 py-3 rounded-xl bg-slate-900/90 border border-cyan-500/40 focus:border-amber-400 focus:outline-none text-white font-bold tracking-wide">
+      </div>
+
+      <!-- Menu Butang Tindakan -->
+      <div class="w-full grid grid-cols-2 gap-3 mt-6">
+        <button id="btnPlayGame" class="col-span-2 py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-emerald-500 text-slate-950 font-arcade font-black text-lg tracking-wider hover:brightness-110 active:scale-98 shadow-xl shadow-amber-500/20 transition-all flex items-center justify-center gap-2">
+          <span>🏁 MULAKAN LUMBA</span>
+        </button>
+        <button id="btnOpenGarage" class="py-3 rounded-xl glass-panel hover:bg-slate-800/80 border border-cyan-400/40 text-cyan-300 font-arcade text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition-all">
+          <span>🏎️ GARAJ KERETA</span>
+        </button>
+        <button id="btnOpenWorldMap" class="py-3 rounded-xl glass-panel hover:bg-slate-800/80 border border-emerald-400/40 text-emerald-300 font-arcade text-xs md:text-sm font-bold flex items-center justify-center gap-2 transition-all">
+          <span>🗺️ PETA LEVEL (10)</span>
+        </button>
+      </div>
+
+      <!-- Butang Bantuan & Mod Guru -->
+      <div class="flex items-center justify-between w-full mt-6 pt-4 border-t border-slate-800 text-xs text-slate-400">
+        <button id="btnAudioToggle" class="hover:text-amber-300 flex items-center gap-1 transition">🔊 Audio: <span id="audioStatusText">ON</span></button>
+        <button id="btnOpenTeacherMode" class="hover:text-cyan-300 flex items-center gap-1 transition text-[11px] text-slate-500">⚙️ Mod Guru</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="worldMapModal" class="absolute inset-0 z-30 flex items-center justify-center p-3 md:p-6 bg-slate-950/90 backdrop-blur-md hidden">
+    <div class="max-w-4xl w-full h-[90vh] glass-panel rounded-3xl p-5 md:p-7 border border-white/20 shadow-2xl flex flex-col justify-between overflow-hidden">
+      <!-- Header Peta -->
+      <div class="flex justify-between items-center pb-3 border-b border-slate-800">
+        <div>
+          <h2 class="text-xl md:text-2xl font-black font-arcade text-amber-300 flex items-center gap-2">🗺️ PETA KEJUARAAN 10 LEVEL</h2>
+          <p class="text-xs text-slate-400">Kuasai silibus Pendidikan Islam Tahun 6 (DSKP / RPT 2026)</p>
+        </div>
+        <button id="btnCloseWorldMap" class="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-300 font-bold">✕</button>
+      </div>
+
+      <!-- Senarai 10 Level Grid -->
+      <div id="levelGridContainer" class="grid grid-cols-2 md:grid-cols-5 gap-3 overflow-y-auto py-4 pr-1 my-auto max-h-[68vh]">
+        <!-- Level cards akan dijana secara dinamik oleh JavaScript -->
+      </div>
+
+      <!-- Footer Info -->
+      <div class="flex justify-between items-center pt-3 border-t border-slate-800 text-xs text-slate-300">
+        <span id="mapProgressSummary">Kemajuan: 1/10 Selesai</span>
+        <span class="text-amber-400 font-arcade">⭐ Kumpul markah & jawab soalan penamat</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="garageModal" class="absolute inset-0 z-30 flex items-center justify-center p-3 md:p-6 bg-slate-950/90 backdrop-blur-md hidden">
+    <div class="max-w-3xl w-full glass-panel rounded-3xl p-5 md:p-7 border border-white/20 shadow-2xl flex flex-col justify-between overflow-hidden">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">🏎️</span>
+          <div>
+            <h2 class="text-xl md:text-2xl font-black font-arcade text-cyan-300">GARAJ KENDERAAN</h2>
+            <p class="text-xs text-slate-400">Pilih jentera dan tingkatkan prestasi menggunakan syiling!</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 bg-amber-950/60 px-4 py-1.5 rounded-xl border border-amber-500/40">
+          <span class="text-xl">🪙</span>
+          <span id="garageCoinDisplay" class="font-arcade font-bold text-amber-300 text-lg">0</span>
+        </div>
+      </div>
+
+      <!-- Paparan Kereta Terpilih & Statistik -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-5 py-4 items-center">
+        <!-- Visual Kereta -->
+        <div class="md:col-span-5 flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 relative">
+          <div id="garageCarPreviewSvg" class="w-48 h-32 flex items-center justify-center"></div>
+          <h3 id="garageCarName" class="text-lg font-black font-arcade text-amber-300 mt-3">SPEED RACER</h3>
+          <span id="garageCarStatusBadge" class="text-[10px] font-arcade px-3 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/40 mt-1">DIPILIH</span>
+        </div>
+
+        <!-- Statistik & Naik Taraf -->
+        <div class="md:col-span-7 flex flex-col gap-3">
+          <!-- Stat Bars -->
+          <div>
+            <div class="flex justify-between text-xs font-arcade text-slate-300 mb-1">
+              <span>SPEED (Kelajuan)</span>
+              <span id="statSpeedVal" class="text-cyan-400">65%</span>
+            </div>
+            <div class="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-800">
+              <div id="statSpeedBar" class="h-full bg-cyan-400 rounded-full transition-all" style="width: 65%;"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs font-arcade text-slate-300 mb-1">
+              <span>ACCELERATION (Pecutan)</span>
+              <span id="statAccelVal" class="text-emerald-400">70%</span>
+            </div>
+            <div class="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-800">
+              <div id="statAccelBar" class="h-full bg-emerald-400 rounded-full transition-all" style="width: 70%;"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs font-arcade text-slate-300 mb-1">
+              <span>HANDLING (Kawalan)</span>
+              <span id="statHandlingVal" class="text-amber-400">60%</span>
+            </div>
+            <div class="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-800">
+              <div id="statHandlingBar" class="h-full bg-amber-400 rounded-full transition-all" style="width: 60%;"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs font-arcade text-slate-300 mb-1">
+              <span>BOOST NITRO</span>
+              <span id="statBoostVal" class="text-purple-400">50%</span>
+            </div>
+            <div class="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-800">
+              <div id="statBoostBar" class="h-full bg-purple-400 rounded-full transition-all" style="width: 50%;"></div>
+            </div>
+          </div>
+
+          <!-- Butang Naik Taraf -->
+          <div class="flex gap-2 mt-2">
+            <button id="btnUpgradeCar" class="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:brightness-110 active:scale-95 text-slate-950 font-arcade font-bold text-xs flex items-center justify-center gap-1 shadow-md">
+              <span>⚡ UPGRADE STAT (+5%)</span>
+              <span class="bg-black/20 px-2 py-0.5 rounded text-[11px]">🪙 100</span>
+            </button>
+            <button id="btnSelectCar" class="py-2.5 px-5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-arcade font-bold text-xs">
+              PILIH
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pemilih 5 Kereta Carousel/Grid -->
+      <div class="pt-3 border-t border-slate-800">
+        <div class="text-xs font-arcade text-slate-400 mb-2">PILIH JENTERA:</div>
+        <div id="garageCarSelectorRow" class="grid grid-cols-5 gap-2">
+          <!-- 5 Kad Kereta dijana oleh JS -->
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-4 border-t border-slate-800 mt-2">
+        <button id="btnCloseGarage" class="px-6 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-arcade text-xs font-bold">KEMBALI KE MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="quizModal" class="absolute inset-0 z-40 flex items-center justify-center p-3 md:p-6 bg-slate-950/95 backdrop-blur-lg hidden">
+    <div class="max-w-2xl w-full glass-panel rounded-3xl p-6 md:p-8 border-2 border-amber-400/60 shadow-2xl flex flex-col relative overflow-hidden animate-fade-in">
+      
+      <!-- Lencana & Header Soalan Berbahasa Jawi -->
+      <div class="flex flex-row-reverse justify-between items-start mb-3 font-jawi">
+        <div class="flex flex-col text-right">
+          <div class="inline-flex flex-row-reverse items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-sm w-max">
+            <span>🧠 چيكڤوءينت ڤڠتاهوان</span>
+            <span class="text-slate-400">•</span>
+            <span id="quizBadgeLevel" class="font-bold">ليۏل ١</span>
+          </div>
+          <div id="quizStandardKandungan" class="text-xs text-cyan-300 font-semibold mt-1.5">بيدڠ: القرءان</div>
+        </div>
+        <div class="text-left font-sans">
+          <span id="quizDifficultyTag" class="text-[10px] font-arcade px-2.5 py-1 rounded-lg bg-emerald-950 border border-emerald-500/50 text-emerald-300">EASY</span>
+        </div>
+      </div>
+
+      <!-- Teks Soalan Jawi Sepenuhnya (RTL) -->
+      <div class="bg-slate-900/90 rounded-2xl p-4 md:p-5 border border-slate-800 my-2 font-jawi" style="direction: rtl; text-align: right;">
+        <div class="text-xs text-amber-400 font-bold mb-1">سوءالن:</div>
+        <h3 id="quizQuestionText" class="text-lg md:text-2xl font-bold text-white leading-loose tracking-wide">
+          سوءالن اکن دڤافرکن دسيني...
+        </h3>
+        <div id="quizJawiSnippet" class="hidden text-xl md:text-2xl text-cyan-300 mt-2 pt-2 border-t border-slate-800 leading-loose"></div>
+      </div>
+
+      <!-- Pilihan Jawapan A, B, C, D Jawi Sepenuhnya (RTL) -->
+      <div id="quizOptionsContainer" class="flex flex-col gap-2.5 my-3 font-jawi" style="direction: rtl;">
+        <!-- Opsyen pilihan A, B, C, D dijana melalui JavaScript -->
+      </div>
+
+      <!-- Kotak Maklum Balas Penerangan Jawi Sepenuhnya (Tersembunyi Sebelum Dijawab) -->
+      <div id="quizFeedbackBox" class="rounded-2xl p-4 my-2 hidden border transition-all font-jawi" style="direction: rtl; text-align: right;">
+        <div id="quizFeedbackTitle" class="font-bold text-base md:text-lg flex items-center gap-2 mb-1.5"></div>
+        <div class="text-xs text-slate-400 mb-0.5 font-bold">ڤنرڠن:</div>
+        <p id="quizFeedbackExplanation" class="text-sm md:text-base text-slate-200 leading-relaxed"></p>
+      </div>
+
+      <!-- Butang Tindakan Seterusnya (Jawi) -->
+      <div class="flex justify-start gap-3 mt-3 pt-3 border-t border-slate-800 font-jawi">
+        <button id="btnQuizAction" class="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:brightness-110 active:scale-95 text-slate-950 font-bold text-sm tracking-wide hidden">
+          تروسکن ➔
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="levelSummaryModal" class="absolute inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md hidden">
+    <div class="max-w-md w-full glass-panel rounded-3xl p-6 md:p-8 border border-white/20 shadow-2xl text-center flex flex-col items-center">
+      <div id="summaryTrophyIcon" class="text-5xl mb-2">🏁</div>
+      <h2 id="summaryTitle" class="text-2xl md:text-3xl font-black font-arcade text-amber-300">LEVEL COMPLETE!</h2>
+      <p id="summarySubtitle" class="text-xs text-slate-300 mt-1">Prestasi Pemanduan & Pengetahuan Anda</p>
+
+      <!-- Rating Bintang -->
+      <div id="summaryStars" class="text-3xl my-3 text-amber-400 tracking-widest">⭐⭐⭐</div>
+
+      <!-- Kad Statistik Ringkas -->
+      <div class="w-full grid grid-cols-2 gap-2 my-4 text-left">
+        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+          <div class="text-[10px] font-arcade text-slate-400">SYILING DIKUMPUL</div>
+          <div id="summaryCoins" class="text-lg font-bold font-arcade text-amber-300">+0 🪙</div>
+        </div>
+        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+          <div class="text-[10px] font-arcade text-slate-400">JUMLAH MARKAH</div>
+          <div id="summaryScore" class="text-lg font-bold font-arcade text-emerald-400">0</div>
+        </div>
+        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 col-span-2">
+          <div class="text-[10px] font-arcade text-slate-400">MASA PERLUMBAAN</div>
+          <div id="summaryTime" class="text-lg font-bold font-arcade text-cyan-300">00:00</div>
+        </div>
+      </div>
+
+      <!-- Butang Navigasi Selesai -->
+      <div class="w-full flex flex-col gap-2 relative z-50 pointer-events-auto">
+        <button id="btnSummaryNext" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:brightness-110 active:scale-95 text-slate-950 font-arcade font-black text-sm cursor-pointer select-none">
+          LEVEL SETERUSNYA ➔
+        </button>
+        <button id="btnSummaryRetry" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 font-arcade text-xs cursor-pointer select-none border border-slate-700">
+          🔄 ULANG PERLUMBAAN
+        </button>
+        <button id="btnSummaryHome" class="w-full py-2 rounded-xl text-slate-400 hover:text-white active:scale-95 font-arcade text-xs cursor-pointer select-none">
+          KEMBALI KE MENU UTAMA
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="championModal" class="absolute inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-xl hidden">
+    <div class="max-w-xl w-full glass-panel rounded-3xl p-6 md:p-8 border-2 border-amber-400 shadow-2xl text-center flex flex-col items-center">
+      <div class="text-6xl animate-bounce mb-2">🏆</div>
+      <div class="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-arcade border border-amber-400/40 mb-2">GRAND PRIX FINALE 2026</div>
+      <h2 class="text-2xl md:text-4xl font-black font-arcade text-amber-300 neon-text-gold">TAHNIAH, JUARA!</h2>
+      <p id="championPlayerName" class="text-lg font-bold text-cyan-300 mt-1">Pelumba Bestari</p>
+      <p class="text-xs text-slate-300 max-w-md mt-1">Anda telah menamatkan kesemua 10 Level dan menguasai Sukatan Pelajaran Pendidikan Islam Tahun 6 dengan cemerlang!</p>
+
+      <!-- Badge Kedudukan -->
+      <div class="my-4 px-6 py-2 rounded-2xl bg-gradient-to-r from-amber-600 to-yellow-500 text-slate-950 font-arcade font-black text-lg shadow-lg flex items-center gap-2">
+        <span>🥇 GOLD MASTER RACER</span>
+      </div>
+
+      <!-- Ringkasan Pembelajaran & Metrik -->
+      <div class="w-full bg-slate-900/90 rounded-2xl p-4 border border-slate-800 text-left my-3 space-y-2">
+        <div class="flex justify-between text-xs">
+          <span class="text-slate-400">Ketepatan Soalan (Accuracy Rate):</span>
+          <span id="championAccuracy" class="font-bold text-emerald-400 font-arcade">100%</span>
+        </div>
+        <div class="flex justify-between text-xs">
+          <span class="text-slate-400">Jumlah Syiling Kumpul:</span>
+          <span id="championCoins" class="font-bold text-amber-300 font-arcade">0 🪙</span>
+        </div>
+        <div class="flex justify-between text-xs">
+          <span class="text-slate-400">Jumlah Markah Keseluruhan:</span>
+          <span id="championScore" class="font-bold text-cyan-300 font-arcade">0</span>
+        </div>
+        <div class="pt-2 border-t border-slate-800 text-[11px] text-slate-300">
+          <span class="text-amber-400 font-semibold">Prestasi Bidang:</span>
+          <div id="championDomainAnalysis" class="mt-1 flex flex-wrap gap-1.5">
+            <!-- Badges Bidang -->
+          </div>
+        </div>
+      </div>
+
+      <button id="btnChampionRestart" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:brightness-110 active:scale-95 text-slate-950 font-arcade font-black text-sm mt-2">
+        🏁 KEMBALI KE PENGKALAN UTAMA
+      </button>
+    </div>
+  </div>
+
+  <div id="teacherModal" class="absolute inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-xl hidden">
+    <div class="max-w-2xl w-full max-h-[90vh] glass-panel rounded-3xl p-6 border border-cyan-500/40 shadow-2xl flex flex-col justify-between overflow-hidden">
+      <div class="flex justify-between items-center pb-3 border-b border-slate-800">
+        <div>
+          <h2 class="text-xl font-arcade font-black text-cyan-300 flex items-center gap-2">⚙️ MOD GURU & ANALITIK MURID</h2>
+          <p class="text-xs text-slate-400">Pantau kemajuan pentaksiran berasaskan RPT Pendidikan Islam Tahun 6</p>
+        </div>
+        <button id="btnCloseTeacherMode" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center hover:bg-slate-700">✕</button>
+      </div>
+
+      <!-- Kandungan Analitik & Data Murid -->
+      <div class="overflow-y-auto py-4 space-y-4 my-auto pr-1">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+          <div class="p-3 bg-slate-900 rounded-xl border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-arcade">Nama Murid</div>
+            <div id="teacherStudentName" class="font-bold text-sm text-white mt-1">Pelumba Bestari</div>
+          </div>
+          <div class="p-3 bg-slate-900 rounded-xl border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-arcade">Level Semasa</div>
+            <div id="teacherCurrentLevel" class="font-bold text-sm text-cyan-300 mt-1">Level 1</div>
+          </div>
+          <div class="p-3 bg-slate-900 rounded-xl border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-arcade">Ketepatan Kuiz</div>
+            <div id="teacherAccuracy" class="font-bold text-sm text-emerald-400 mt-1">0%</div>
+          </div>
+          <div class="p-3 bg-slate-900 rounded-xl border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-arcade">Jumlah Markah</div>
+            <div id="teacherTotalScore" class="font-bold text-sm text-amber-300 mt-1">0</div>
+          </div>
+        </div>
+
+        <!-- Rekod Soalan Mengikut Bidang -->
+        <div class="bg-slate-900 rounded-2xl p-4 border border-slate-800">
+          <h4 class="text-xs font-arcade font-bold text-amber-300 mb-2">REKOD BIDANG PEMBELAJARAN (RPT SESI 2026):</h4>
+          <div id="teacherDomainList" class="space-y-1.5 text-xs">
+            <!-- Status Bidang diisi secara dinamik -->
+          </div>
+        </div>
+
+        <!-- Tetapan & Reset Data -->
+        <div class="bg-rose-950/20 border border-rose-500/30 rounded-2xl p-4">
+          <h4 class="text-xs font-arcade font-bold text-rose-400 mb-1">PENGURUSAN DATA LATIHAN</h4>
+          <p class="text-[11px] text-slate-400 mb-3">Padam kemajuan murid untuk memulakan sesi perlumbaan baharu dari Level 1.</p>
+          <button id="btnResetProgress" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-arcade text-xs font-bold transition">
+            ⚠️ RESET PROGRESS MURID
+          </button>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 flex justify-end">
+        <button id="btnCloseTeacherBottom" class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-arcade text-xs">TUTUP DASHBOARD</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playEngine(speedRatio) {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          // Bunyi motor sintetik pendek
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(45 + speedRatio * 90, this.ctx.currentTime);
+          gain.gain.setValueAtTime(0.015, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.1);
+        } catch (e) {}
+      }
+      playCoin() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(987.77, now); // B5
+          osc.frequency.exponentialRampToValueAtTime(1318.51, now + 0.15); // E6
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.2);
+        } catch (e) {}
+      }
+      playBoost() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.exponentialRampToValueAtTime(900, now + 0.4);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.45);
+        } catch (e) {}
+      }
+      playCrash() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(140, now);
+          osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.35);
+        } catch (e) {}
+      }
+      playCorrect() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const notes = [523.25, 659.25, 783.99, 1046.50]; // C - E - G - C
+          notes.forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            const start = this.ctx.currentTime + idx * 0.08;
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.12, start);
+            gain.gain.exponentialRampToValueAtTime(0.001, start + 0.2);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(start);
+            osc.stop(start + 0.25);
+          });
+        } catch (e) {}
+      }
+      playWrong() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.linearRampToValueAtTime(130, now + 0.35);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.4);
+        } catch (e) {}
+      }
+      playFinish() {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const melody = [523.25, 659.25, 783.99, 1046.50, 880, 1046.50];
+          melody.forEach((freq, i) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            const st = this.ctx.currentTime + i * 0.12;
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.15, st);
+            gain.gain.exponentialRampToValueAtTime(0.001, st + 0.28);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(st);
+            osc.stop(st + 0.3);
+          });
+        } catch (e) {}
+      }
+      playCountdownBeep(isGo = false) {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = isGo ? 'triangle' : 'sine';
+          osc.frequency.setValueAtTime(isGo ? 880 : 440, now);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + (isGo ? 0.35 : 0.18));
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + (isGo ? 0.35 : 0.18));
+        } catch (e) {}
+      }
+    }
+    const audio = new SoundEngine();
+
+    // Bank Soalan Berautoriti mengikut Minggu, Bidang, SK & SP sebenar RPT Tahun 6
+    const RPT_DATABASE = {
+      level1: {
+        world: "CITY STARTER",
+        worldJawi: "ليۏل ١ · ڤمولاءن باندر",
+        theme: "city",
+        bidang: "Al-Quran & Jawi",
+        subtext: "Surah Al-Syarh, Asma' Allah Al-Hadi & Teks Jawi Sains Teknologi",
+        questions: [
+          {
+            level: 1,
+            bidang: "القرءان",
+            minggu: "ميڠݢو ٢-٤",
+            topik: "تلاوة سورة الشرح",
+            standardKandungan: "١٫١ ممباچ دان مڠعملکن سورة الشرح دڠن بتول دان برتجويد",
+            standardPembelajaran: "١٫١٫١ ممباچ سورة الشرح دڠن بتول دان برتجويد",
+            soalan: "اڤاکه نام سورة دالم القرءان يڠ برمقصود 'کلاڤڠن' يڠ دڤلاجري ڤد اول سيسي تاهون ٦؟",
+            jawi: "",
+            pilihanJawapan: ["سورة الشرح", "سورة التين", "سورة القدر", "سورة الماعون"],
+            jawapanBetul: 0,
+            penerangan: "سورة الشرح برمقصود کلاڤڠن دان مڠندوڠي ٨ ايات.",
+            tahapKesukaran: "EASY"
+          },
+          {
+            level: 1,
+            bidang: "عقيدة",
+            minggu: "ميڠݢو ٢-٣",
+            topik: "اسماء الله الهادي",
+            standardKandungan: "٣٫١ ميقيني کونسيڤ نام الله الهادي دان الحسيب",
+            standardPembelajaran: "٣٫١٫١ مڽاتاکن ڤڠرتين نام الله الهادي",
+            soalan: "نام الله 'الهادي' (الهادي) برمقصود الله مها...",
+            jawi: "",
+            pilihanJawapan: ["مها عاديل", "مها ڤمبري ڤتونجوق", "مها مڠهيتوڠ", "مها ڤڠمڤون"],
+            jawapanBetul: 1,
+            penerangan: "الهادي برارتي الله سبحانه وتعالى مها ڤمبري ڤتونجوق دان هداية کڤد همبا-ڽ کجالن کبنرن.",
+            tahapKesukaran: "EASY"
+          },
+          {
+            level: 1,
+            bidang: "جاوي",
+            minggu: "ميڠݢو ٢-٤",
+            topik: "ساءينس دان تيکنولوݢي",
+            standardKandungan: "٧٫١ ممباچ، ممبينا دان منوليس ڤلباݢاي تيک س برتيما",
+            standardPembelajaran: "٧٫١٫١ ممباچ تيک س برداسرکن تيما ساءينس دان تيکنولوݢي",
+            soalan: "ڤيليه ايجاءن جاوي يڠ بتول باݢي ڤرکاتاءن 'TEKNOLOGI':",
+            jawi: "",
+            pilihanJawapan: ["تيکنولوݢي", "تيکنولوجي", "تکنولوݢي", "تيکنولوجهي"],
+            jawapanBetul: 0,
+            penerangan: "برداسرکن ڤدومن ايجاءن جاوي دوان بهاس دان ڤوستاک (DBP) سرتا DSKP تاهون ٦، ايجاءن يڠ بتول ياله 'تيکنولوݢي'.",
+            tahapKesukaran: "EASY"
+          }
+        ]
+      },
+      level2: {
+        world: "DESERT CHALLENGE",
+        worldJawi: "ليۏل ٢ · چابرن ڤادڠ ڤاسير",
+        theme: "desert",
+        bidang: "Ibadah & Jawi",
+        subtext: "Hukum Sebagai Manual Hidup: Wajib, Sunat, Makruh, Haram, Harus",
+        questions: [
+          {
+            level: 2,
+            bidang: "عبادة",
+            minggu: "ميڠݢو ٤-٥",
+            topik: "حکوم سباݢاي مانوال هيدوڤ",
+            standardKandungan: "٤٫١ مروموس دان ممهمي جنيس٢ حکوم دالم اسلام",
+            standardPembelajaran: "٤٫١٫١ مڽاتاکن جنيس٢ حکوم دالم اسلام سرتا ڤڠرتينڽ",
+            soalan: "ڤربواتن يڠ منداڤت ڤهالا جک دلاکوکن، دان بردوسا جک دتيڠݢلکن ديناماکن حکوم...",
+            jawi: "",
+            pilihanJawapan: ["واجب", "سنة", "هاروس", "مکروه"],
+            jawapanBetul: 0,
+            penerangan: "واجب ياله عملن يڠ دبري ڤهالا جک دکرجاکن دان بردوسا سکيراڽ دتيڠݢلکن سڤرتي صلاة فرض ليم وقتو.",
+            tahapKesukaran: "EASY"
+          },
+          {
+            level: 2,
+            bidang: "عبادة",
+            minggu: "ميڠݢو ٥",
+            topik: "حکوم ڤربواتن مکروه",
+            standardKandungan: "٤٫١ مروموس جنيس حکوم دالم اسلام",
+            standardPembelajaran: "٤٫١٫٢ منجلسکن ڤربواتن واجب، سنة، مکروه، حرام دان هاروس",
+            soalan: "اڤاکه حکوم ماکن ماکنن برباءو قوات سڤرتي باوڠ منته سبلوم ک مساجد اونتوق صلاة برجماعة؟",
+            jawi: "",
+            pilihanJawapan: ["حرام", "مکروه", "واجب", "بطل"],
+            jawapanBetul: 1,
+            penerangan: "حکومڽ اداله مکروه کران بوليه مڠݢڠݢو کسليساءن جماعه لاءين دالم مساجد.",
+            tahapKesukaran: "MEDIUM"
+          },
+          {
+            level: 2,
+            bidang: "عبادة",
+            minggu: "ميڠݢو ٤",
+            topik: "حکوم حرام",
+            standardKandungan: "٤٫١ ممهمي حکوم دالم اسلام",
+            standardPembelajaran: "٤٫١٫٢ منجلسکن ڤربواتن حرام دان عاقبتڽ",
+            soalan: "منيڠݢلکن عملن يڠ دحکومکن حرام ا serialization اکن منداڤت...",
+            jawi: "",
+            pilihanJawapan: ["ڤهالا", "دوسا", "ککوفورن", "کمورکاءن"],
+            jawapanBetul: 0,
+            penerangan: "حرام: ملاکوکنڽ منداڤت دوسا دان عذاب، ماناکالا منيڠݢلکنڽ کران ڤاتوه کڤد الله منداڤت ݢنجارن ڤهالا.",
+            tahapKesukaran: "EASY"
+          }
+        ]
+      },
+      level3: {
+        world: "MADINAH JOURNEY",
+        worldJawi: "ليۏل ٣ · ڤرجالانن مدينه",
+        theme: "madinah",
+        bidang: "Sirah Nabawiyyah",
+        subtext: "Pembentukan Negara Madinah, Muhajirin, Ansar & Piagam Madinah",
+        questions: [
+          {
+            level: 3,
+            bidang: "سيرة",
+            minggu: "ميڠݢو ٦-٨",
+            topik: "ڤمبنتوقن نݢارا مدينه",
+            standardKandungan: "٥٫١ مروموس اعتبار درڤد ڤريستيوا ڤمبنتوقن نݢارا مدينه",
+            standardPembelajaran: "٥٫١٫٢ منجلسکن ڤرانن مسجد النبوي",
+            soalan: "اڤاکه ڤرانن اوتاما مسجد النبوي يڠ دبينـا سباءيق سهاج رسول الله ﷺ تيبا دمدينة؟",
+            jawi: "",
+            pilihanJawapan: ["ڤوست عبادة، ڤڽاتوان اومة دان ڤنتدبيرن", "ڤاسر ڤرنياݢاءن اونتا سمات-مات", "کوبو ڤرتاهنن ڤرڠ سهاج", "تمڤت ڤرسيڠݢاهن قافله داݢڠ مشترکين"],
+            jawapanBetul: 0,
+            penerangan: "مسجد النبوي برفوعسي سباݢاي ڤوست عبادة، ڤوست کعلمان، ڤڽاتوان اومة دان ڤوست ڤنتدبيرن نݢارا اسلام ڤرتام.",
+            tahapKesukaran: "MEDIUM"
+          },
+          {
+            level: 3,
+            bidang: "سيرة",
+            minggu: "ميڠݢو ٧",
+            topik: "ڤرساوداراءن مهاجرين دان انصار",
+            standardKandungan: "٥٫١ مروموس اعتبار ڤمبنتوقن نݢارا مدينه",
+            standardPembelajaran: "٥٫١٫٣ مڠهوراين ڤرساوداراءن مهاجرين دان انصار",
+            soalan: "ݢولوڠن ڤندودوق اصل کوتا مدينه يڠ مڽمبوت دان ممبنتو رسول الله ﷺ دکنلي سباݢاي قوم...",
+            jawi: "",
+            pilihanJawapan: ["قوم انصار", "قوم مهاجرين", "قوم قريش", "قوم اوس سهاج"],
+            jawapanBetul: 0,
+            penerangan: "قوم انصار ياله ڤندودوق اصل مدينه (اوس دان خزرج) يڠ منولوڠ قوم مهاجرين يڠ برهجرة دري مکة.",
+            tahapKesukaran: "EASY"
+          },
+          {
+            level: 3,
+            bidang: "سيرة",
+            minggu: "ميڠݢو ٧-٨",
+            topik: "ڤياݢم مدينه",
+            standardKandungan: "٥٫١ ممڤراينچيکن ايسي کاندوڠن ڤياݢم مدينه",
+            standardPembelajaran: "٥٫١٫٤ ممڤراينچيکن ايسي٢ ڤياݢم مدينه",
+            soalan: "اڤاکه توجوان ڤياݢم مدينه دݢوبل اوليه نبي محمد ﷺ؟",
+            jawi: "",
+            pilihanJawapan: ["منجامين ڤرڤادوان قوم دان حق کبيباسن براݢام", "مڠوسير قوم يهودي کلوار سرتا-مرتا", "مڠهاڤوسکن ڤرداݢڠن دمدينة", "ملارڠ قوم انصار ممبنتو مهاجرين"],
+            jawapanBetul: 0,
+            penerangan: "ڤياݢم مدينه اداله ڤرلمباݢاءن برتوليس ڤرتام يڠ منجامين کعاديلن، حق اساسي دان کأمانن سموا ڤندودوق مدينه.",
+            tahapKesukaran: "MEDIUM"
+          }
+        ]
+      },
+      level4: {
+        world: "TAJWID MOUNTAIN",
+        worldJawi: "ليۏل ٤ · ݢونوڠ تجويد",
+        theme: "mountain",
+        bidang: "Tajwid Al-Quran",
+        subtext: "Hukum Mad: Mad Lin, Mad 'Aridh Lissukun, Mad Wajib Muttasil & Jaiz Munfasil",
+        questions: [
+          {
+            level: 4,
+            bidang: "القرءان (تجويد)",
+            minggu: "ميڠݢو ٨-٩",
+            topik: "حکوم مد لين",
+            standardKandungan: "١٫٦ ممباچ ايات يڠ مڠندوڠي باچاءن مد ڤد قدر ٢، ٤ دان ٦ حرکة",
+            standardPembelajaran: "١٫٦٫٢ مڠنل ڤستي کلمه يڠ مڠندوڠي باچاءن مد لين",
+            soalan: "مد لين ترجادي اڤابيلا حروف واو (و) اتاو ياء (ي) برتندا سکون دداهولوءي اوليه حروف برباريس...",
+            jawi: "",
+            pilihanJawapan: ["فتحة (اتس)", "کسرة (باوه)", "ضمة (دڤن)", "تنوين کسرة"],
+            jawapanBetul: 0,
+            penerangan: "مد لين برلاکو اڤابيلا حروف لين (و اتاو ي برتندا سکون) دداهولوءي حروف برباريس اتس (فتحة) دان دواقفکن.",
+            tahapKesukaran: "MEDIUM"
+          },
+          {
+            level: 4,
+            bidang: "القرءان (تجويد)",
+            minggu: "ميڠݢو ١٠-١٢",
+            topik: "مد عارض للسكون",
+            standardKandungan: "١٫٦ ممباچ حکوم مد دڠن بتول",
+            standardPembelajaran: "١٫٦٫١ ممباچ کلمه مد عارض للسكون",
+            soalan: "براڤاکه قدر حرکة باچاءن يڠ دبنرکن باݢي مد عارض للسكون کتيک واقف؟",
+            jawi: "",
+            pilihanJawapan: ["٢، ٤ اتاو ٦ حرکة", "هاڽ ٢ حرکة سهاج", "مستي ٧ حرکة", "١ حرکة سهاج"],
+            jawapanBetul: 0,
+            penerangan: "مد عارض للسكون بوليه دباچ دڠن قدر ٢، ٤، اتاو ٦ حرکة کتيک برهنتي (واقف).",
+            tahapKesukaran: "MEDIUM"
+          },
+          {
+            level: 4,
+            bidang: "القرءان (تجويد)",
+            minggu: "ميڠݢو ٢٠-٢١",
+            topik: "مد واجب متصل",
+            standardKandungan: "١٫٧ ممباچ حکوم مد ٤ دان ٥ حرکة",
+            standardPembelajaran: "١٫٧٫٢ مڠنل ڤستي مد واجب متصل",
+            soalan: "مد واجب متصل برلاکو اڤابيلا حروف مد برتمو حروف همزة دالم...",
+            jawi: "",
+            pilihanJawapan: ["ساتو کلمه يڠ سام", "دوا کلمه يڠ براسيڠن", "اول سورة سهاج", "هوجوڠ ستياڤ ايات"],
+            jawapanBetul: 0,
+            penerangan: "متصل برمقصود برسامبوڠ. حروف مد دان همزة براد ددالم ساتو کلمه يڠ سام (قدر باچاءن ٤ اتاو ٥ حرکة).",
+            tahapKesukaran: "HARD"
+          }
+        ]
+      },
+      level5: {
+        world: "IBADAH EXTREME",
+        worldJawi: "ليۏل ٥ · عبادة ايکستريم",
+        theme: "extreme",
+        bidang: "Kefahaman Al-Quran & Ibadah",
+        subtext: "Kefahaman Surah Al-Ma'un & Solat Ketika Sakit (Rukhsah)",
+        questions: [
+          {
+            level: 5,
+            bidang: "القرءان (کفهمن)",
+            minggu: "ميڠݢو ١٣-١٥",
+            topik: "کفهمن سورة الماعون",
+            standardKandungan: "١٫٥ مروموس، مڠعمل دان مڠحياتي سورة الماعون",
+            standardPembelajaran: "١٫٥٫٢ منجلسکن تونتوتن سورة الماعون",
+            soalan: "سورة الماعون ممبري امرن کرس ترهادڤ اورڠ يڠ منولق انق يتيم دان اورڠ يڠ صلاة دالم کاداءن...",
+            jawi: "الَّذِينَ هُمْ عَن صَلَاتِهِمْ سَاهُونَ",
+            pilihanJawapan: ["لالاي دان منونجوق-نونجوق (رياء)", "خشوع دان تواضع", "برسݢرا منوناينکنڽ", "مناڠيس کران تاکوت کڤد الله"],
+            jawapanBetul: 0,
+            penerangan: "ايات ٤-٦ سورة الماعون مڠيچم ݢولوڠن يڠ لالاي درڤد صلاةڽ سرتا ايڠين منونجوق-نونجوق ڤربواتنڽ (رياء).",
+            tahapKesukaran: "HARD"
+          },
+          {
+            level: 5,
+            bidang: "عبادة",
+            minggu: "ميڠݢو ١٣-١٥",
+            topik: "رخصة صلاة کتيک ساکيت",
+            standardKandungan: "٤٫٢ مروموس کونسيڤ صلاة کتيک ساکيت",
+            standardPembelajaran: "٤٫٢٫٢ ممڤراينچيکن تاتاچارا صلاة کتيک ساکيت",
+            soalan: "سکيراڽ سأورڠ ڤساکيت تيدق ممڤو صلاة برديري دان دودوق، باݢايماناکه چارا صلاة ستروسڽ؟",
+            jawi: "",
+            pilihanJawapan: ["سچارا مڠيريڠ دأتس روسوق کانن", "منيڠݢلکن صلاة سهيڠݢ سمبوه", "هاڽ باير فدية", "صلاة دجمعکن ستياڤ هاري تنڤا رکوع"],
+            jawapanBetul: 0,
+            penerangan: "جک تيدق ممڤو برديري دان دودوق، ڤساکيت هندقله صلاة سچارا مڠيريڠ (روسوق کانن مڠهادڤ قبلة) اتاو منلنتڠ.",
+            tahapKesukaran: "MEDIUM"
+          },
+          {
+            level: 5,
+            bidang: "عبادة",
+            minggu: "ميڠݢو ١٤",
+            topik: "حکمة صلاة کتيک ساکيت",
+            standardKandungan: "٤٫٢ صلاة کتيک ساکيت",
+            standardPembelajaran: "٤٫٢٫٤ مڠاناليسيس کڤنتيڠن منوناينکن صلاة کتيک ساکيت",
+            soalan: "اڤاکه بوقتي اسلام اداله اݢام يڠ ممبري کمودهن (رخصة) کڤد اومتڽ؟",
+            jawi: "",
+            pilihanJawapan: ["کواجڤن صلاة تتڤ دتوناينکن مڠيکوت کممڤوان ڤساکيت", "ڤساکيت دبيبسکن تروس درڤد صلاة", "بوليه مڠݢنتيکن صلاة دڠن برصدقه", "صلاة دکوراڠکن رکعة سچارا مطلق"],
+            jawapanBetul: 0,
+            penerangan: "اسلام اݢام موده دان تيدق ممببکن؛ صلاة تيدق بوليه دتيڠݢلکن سلاݢي براکل، نامون دبري کريڠنن چارا ڤلقساناءنڽ.",
+            tahapKesukaran: "MEDIUM"
+          }
+        ]
+      },
+      level6: {
+        world: "SIRAH NIGHT DRIVE",
+        worldJawi: "ليۏل ٦ · ڤمندوان مالم سيرة",
+        theme: "night",
+        bidang: "Sirah Nabawiyyah & Hadis",
+        subtext: "Sifat Tasamuh (Toleransi) Rasulullah SAW, Larangan Rasuah & Jihad",
+        questions: [
+          {
+            level: 6,
+            bidang: "سيرة",
+            minggu: "ميڠݢو ١٦-١٨",
+            topik: "صيفت تسامح (تولرنسي) نبي محمد ﷺ",
+            standardKandungan: "٥٫٢ مروموس اعتبار درڤد کأوڠݢولن صيفت تسامح نبي محمد ﷺ",
+            standardPembelajaran: "٥٫٢٫١ مڽاتاکن مقصود صيفت تسامح",
+            soalan: "اڤاکه ڤڠرتين صيفت 'تسامح' (تسامح) يڠ دچونتوهکن اوليه بݢيندا رسول الله ﷺ؟",
+            jawi: "",
+            pilihanJawapan: ["تولرنسي، برلاڤڠ دادا دان برتولق انسور", "برتݢس تنڤا مماءفکن", "مڠاباايکن حکوم شريعة", "برساءيڠ مڠجر هرتا دنيا"],
+            jawapanBetul: 0,
+            penerangan: "تسامح برمقصود سيکڤ برتولرنسي، ساليڠ مڠحرمتي دان برلاڤڠ دادا ترهادڤ ڤربيذاءن سلاݢي تيدق ملڠݢر شريعة.",
+            tahapKesukaran: "MEDIUM"
+          },
+          {
+            level: 6,
+            bidang: "حديث",
+            minggu: "ميڠݢو ٢١-٢٢",
+            topik: "مشارکت ماجو تنڤا رشواه",
+            standardKandungan: "٢٫١ مروموس دان مڠحياتي حديث لارڠن رشواه",
+            standardPembelajaran: "٢٫١٫٢ مڽاتاکن مقصود رشواه",
+            soalan: "اڤاکه ايمڤليکاسي بهاي ڤربواتن ممبري دان منريما رشواه کڤد نݢارا؟",
+            jawi: "",
+            pilihanJawapan: ["ملومڤوهکن کعاديلن دان مروسقکن اينتݢريتي مشارکت", "منيڠکتکن کعاديلن دان ايکونومي رعيت", "مراڤتکن هوبوڠن ڤرصحابتن", "ممبنتو ݢولوڠن فقير ميسکين"],
+            jawapanBetul: 0,
+            penerangan: "حديث رسول الله ﷺ ملعنة ڤمبري دان ڤنريما رشواه کران رشواه منظاليمي ڤيهق لاءين دان مرونتوهکن ڤنتدبيرن يڠ عاديل.",
+            tahapKesukaran: "HARD"
+          },
+          {
+            level: 6,
+            bidang: "سيرة",
+            minggu: "ميڠݢو ٢٨-٣٠",
+            topik: "کونسيڤ جهاد",
+            standardKandungan: "٥٫٣ مروموس اعتبار دان منلادني کڤريبادين نبي دالم کونسيڤ جهاد",
+            standardPembelajaran: "٥٫٣٫١ مڽاتاکن کونسيڤ جهاد",
+            soalan: "برايکوت اداله اسڤيک جهاد يڠ دتونتوت دالم اسلام کچوالي:",
+            jawi: "",
+            pilihanJawapan: ["ملاکوکن کروسقن دان کݢانسن اتس نام اݢام", "جهاد ملاون هاوا نفسو", "جهاد منونتوت علمو ڤڠتاهوان", "جهاد ممڤرتاهنکن کداولتـن تانه اءير"],
+            jawapanBetul: 0,
+            penerangan: "اسلام مننتڠ سکرس-کرسڽ کݢانسن. جهاد سبنر اداله کسوڠݢوهن منݢقکن کبنرن، منونتوت علمو دان ممباءيقي ديري.",
+            tahapKesukaran: "MEDIUM"
+          }
+        ]
+      },
+      level7: {
+        world: "ADAB HIGHWAY",
+        worldJawi: "ليۏل ٧ · ليبوهراي ادب",
+        theme: "highway",
+        bidang: "Adab Islamiyyah",
+        subtext: "Adab Ziarah, Menjaga Kemudahan Awam & Adab Bernegara",
+        questions: [
+          {
+            level: 7,
+            bidang: "ادب",
+            minggu: "ميڠݢو ١٩-٢٠",
+            topik: "ماري برزياره دڠن برحکمة",
+            standardKandungan: "٦٫٢ مروموس کونسيڤ ادب برزياره دان مڠعملکنڽ",
+            standardPembelajaran: "٦٫٢٫٢ منجلسکن ادب کتيک برزياره",
+            soalan: "انتارا ادب اسلام کتيک منزيارهي رومه اورڠ لاءين ياله...",
+            jawi: "",
+            pilihanJawapan: ["ممبري سلام دان ممينتا ايذين تيدق ملبيهي ٣ کالي", "ماسوق تنڤا مڠتوق ڤينتو جک کنل راڤت", "مڠينتاي ک دالم رومه ملالوءي تيڠکڤ", "مميليه وقتو ماکن تڠه هاري اونتوق برزياره"],
+            jawapanBetul: 0,
+            penerangan: "سنة نبي مڠاجر کيت ممبري سلام دان ممينتا ايذين سهيڠݢ ٣ کالي؛ جک تياد جواڤن، هندقله بريدار دڠن برادب.",
+            tahapKesukaran: "MEDIUM"
+          },
+          {
+            level: 7,
+            bidang: "ادب",
+            minggu: "ميڠݢو ٣١-٣٢",
+            topik: "کمودهن عوام ميليق برسام",
+            standardKandungan: "٦٫٣ مروموس کونسيڤ ادب ترهادڤ هرتا بندا دان کمودهن عوام",
+            standardPembelajaran: "٦٫٣٫١ مڠاڤليکاسيکـن تڠݢوڠجواب ملمڤوسکن/ممليهارا کمودهن عوام",
+            soalan: "ڤربواتن مروسقکن کمودهن عوام سڤرتي ڤرهنتين بس دان تامن ڤرماءينن (ۏنداليسمى) دحکومکن...",
+            jawi: "",
+            pilihanJawapan: ["حرام دان بردوسا کران منظاليمي حق اورڠ راماي", "هاروس سکيراڽ تياد اورڠ مليهت", "مکروه سهاج", "سنة جک اونتوق برݢمبيرا"],
+            jawapanBetul: 0,
+            penerangan: "کمودهن عوام اداله حق ميليق برسام مشارکت. مروسقکنڽ بردوسا کران مڽوسهکن اورڠ راماي.",
+            tahapKesukaran: "EASY"
+          },
+          {
+            level: 7,
+            bidang: "ادب",
+            minggu: "ميڠݢو ٣٥-٣٦",
+            topik: "سايڠي نݢارا امانه کيت",
+            standardKandungan: "٦٫٤ مروموس کونسيڤ ادب برنݢارا",
+            standardPembelajaran: "٦٫٤٫٢ مڠاڤليکاسيکـن ادب٢ برنݢارا",
+            soalan: "باݢايماناکه سأورڠ موريد تاهون ٦ داڤت منزاهيرکن ادب منچينتاءي نݢارا؟",
+            jawi: "",
+            pilihanJawapan: ["مماتوهي اوندڠ-اوندڠ، بلاجر برسوڠݢوه-سوڠݢوه دان منجاݢ کهرمونين", "مڽيبرکن فطنه تنتڠ نݢارا د ميديا سوسيال", "ممبواڠ سمڤه مراتا-راتا", "ممنتيڠکن ديري سنديري تنڤا ڤدوليکن مشارکت"],
+            jawapanBetul: 0,
+            penerangan: "چينتا اکن تانه اءير دزاهيرکن ملالوءي کطاعتن کڤد ڤراتورن، منجاݢ ڤرڤادوان قوم دان مڠهارومکن نام نݢارا.",
+            tahapKesukaran: "MEDIUM"
+          }
+        ]
+      },
+      level8: {
+        world: "AQIDAH STORM",
+        worldJawi: "ليۏل ٨ · ريبوت عقيدة",
+        theme: "storm",
+        bidang: "Akidah Islamiyyah",
+        subtext: "Beriman kepada Qada' dan Qadar, Menghindari Khurafat & Bahaya Riddah",
+        questions: [
+          {
+            level: 8,
+            bidang: "عقيدة",
+            minggu: "ميڠݢو ٢٣-٢٤",
+            topik: "برايمان کڤد قضاء دان قدر",
+            standardKandungan: "٣٫٢ ميقيني کونسيڤ برايمان کڤد قضاء دان قدر",
+            standardPembelajaran: "٣٫٢٫١ مڽاتاکن ڤڠرتين قضاء دان قدر",
+            soalan: "ڤلقساناءن ستياڤ کتتڤن الله سبحانه وتعالى سجق ازلي کأتس سلوروه مخلوق مڠيکوت کهندق-ڽ ديناماکن...",
+            jawi: "",
+            pilihanJawapan: ["قدر", "قضاء", "نصيب سمات-مات", "خي الن"],
+            jawapanBetul: 0,
+            penerangan: "قضاء ياله کتتڤن الله سجق ازلي، ماناکالا قدر ياله ڤلقساناءن کتتڤن ترسبوت مڠيکوت قدر دان کتنتوان-ڽ.",
+            tahapKesukaran: "HARD"
+          },
+          {
+            level: 8,
+            bidang: "عقيدة",
+            minggu: "ميڠݢو ٣٣-٣٤",
+            topik: "هيندري خرافة",
+            standardKandungan: "٣٫٣ مروموس کڤنتيڠن ممڤرتاهنکن عقيدة درڤد ڤربواتن خرافة",
+            standardPembelajaran: "٣٫٣٫١ مڽاتاکن مقصود خرافة",
+            soalan: "ممڤرچاياءي بهاوا بوروڠ هنتو ممباوا سيال اتاو مندي بوڠا بوليه ممبواڠ سيال مروڤاکن عملن...",
+            jawi: "",
+            pilihanJawapan: ["خرافة يڠ برتنتڠن دڠن شريعة اسلام", "سنة نينيق مويڠ يڠ واجب دجاݢ", "هاروس دعملکن اونتوق کسلمتن", "عملن يڠ دݢالقکن دالم اݢام"],
+            jawapanBetul: 0,
+            penerangan: "خرافة ياله کڤرچاياءن کاروت اتاو دوڠيڠ يڠ تيدق برداسرکن القرءان دان حديث سرتا بوليه مروسقکن عقيدة.",
+            tahapKesukaran: "HARD"
+          },
+          {
+            level: 8,
+            bidang: "عقيدة",
+            minggu: "ميڠݢو ٣٧-٣٨",
+            topik: "بهاي ردة",
+            standardKandungan: "٣٫٤ مروموس کڤنتيڠن ممڤرتاهنکن عقيدة درڤد ڤربواتن ردة",
+            standardPembelajaran: "٣٫٤٫١ مڽاتاکن مقصود ردة",
+            soalan: "اڤاکه يڠ دمقصودکن دڠن اصطلاح 'ردة' (ردة) دالم ڤݢڠن عقيدة اسلام؟",
+            jawi: "",
+            pilihanJawapan: ["کلوار درڤد اݢام اسلام سام اد ملالوءي اعتقاد، ڤرکاتاءن اتاو ڤربواتن", "بربوات دوسا کچيل سچارا سڠاج", "لوڤا منوناينکن صلاة سنة", "ملاکوکن کسالهن جناية سيۏيل"],
+            jawapanBetul: 0,
+            penerangan: "ردة (مرتد) برمقصود کلوار درڤد اݢام اسلام. ڤربواتن اين مڠهاڤوسکن سݢالا عملن صالح دان ممبطلکن کإسلامن.",
+            tahapKesukaran: "HARD"
+          }
+        ]
+      },
+      level9: {
+        world: "CHAMPION CIRCUIT",
+        worldJawi: "ليۏل ٩ · ليتر جوارا",
+        theme: "circuit",
+        bidang: "Ibadah (Jenazah), Tajwid & Jawi",
+        subtext: "Solat Jenazah, Mad Lazim Harfi & Khat Ruq'ah (Aras Analisis)",
+        questions: [
+          {
+            level: 9,
+            bidang: "عبادة",
+            minggu: "ميڠݢو ٢٥-٢٧",
+            topik: "صلاة جنازة: ڤڠحرمتن تراخير",
+            standardKandungan: "٤٫٣ مروموس کونسيڤ صلاة جنازة دان مڠعملکنڽ",
+            standardPembelajaran: "٤٫٣٫٢ ممڤراينچيکن تاتاچارا صلاة جنازة",
+            soalan: "صلاة جنازة مڠندوڠي امڤت کالي تکبير. اڤاکه يڠ دباچ سلڤس تکبير يڠ کدوا؟",
+            jawi: "",
+            pilihanJawapan: ["صلوات کأتس نبي محمد ﷺ", "ممباچ سورة الفاتحة", "دعاء خصوص اونتوق جنازة", "دعاء اونتوق سلوروه قوم مسلمين"],
+            jawapanBetul: 0,
+            penerangan: "ترتيب صلاة جنازة: تکبير ١: الفاتحة، تکبير ٢: صلوات کأتس نبي، تکبير ٣: دعاء اونتوق جنازة، تکبير ٤: دعاء دان سلام.",
+            tahapKesukaran: "EXPERT"
+          },
+          {
+            level: 9,
+            bidang: "القرءان (تجويد)",
+            minggu: "ميڠݢو ٣٣-٣٤",
+            topik: "مد لازم حرفي",
+            standardKandungan: "١٫٨ ممباچ ايات يڠ مڠندوڠي حکوم مد ٦ حرکة",
+            standardPembelajaran: "١٫٨٫٢ مڠنل ڤستي کلمه مد لازم حرفي",
+            soalan: "حکوم مد لازم حرفي مخفف اتاو مثقل واجب دباچ دڠن قدر ڤنجڠ...",
+            jawi: "",
+            pilihanJawapan: ["٦ حرکة", "٢ حرکة سهاج", "٤ حرکة سهاج", "بوليه ڤيليه انتارا ٢ هيڠݢ ٤ حرکة"],
+            jawapanBetul: 0,
+            penerangan: "سموا جنيس مد لازم (باءيق کلمي ماهوڤون حرفي) واجب دباچ ڤنجڠ دڠن قدر ٦ حرکة.",
+            tahapKesukaran: "EXPERT"
+          },
+          {
+            level: 9,
+            bidang: "جاوي",
+            minggu: "ميڠݢو ٢٣-٢٨",
+            topik: "خط خزانه بودايا (خط رقعة)",
+            standardKandungan: "٧٫٢ مڠنل دان منوليس سني خط",
+            standardPembelajaran: "٧٫٢٫١ مڠنل ڤستي بنتوق حروف خط رقعة",
+            soalan: "انتارا چيري اوتاما سني خط رقعة (خط رقعة) يڠ دڤلاجري دالم تاهون ٦ ياله...",
+            jawi: "",
+            pilihanJawapan: ["بنتوق حروف ريڠکـس، چوندوڠ ککانن دان تيتيق برسامبوڠ", "ممڤوڽاءي هياسن بوڠا يڠ روميت", "ممڤوڽاءي باريس حرکت يڠ سارت سڤرتي خط ثلث", "هاڽ دتوليس ڤد باتو نيسن ڤوربا"],
+            jawapanBetul: 0,
+            penerangan: "خط رقعة دچيڤتا اونتوق ممودهکن ڤنوليسن چڤت هارين دڠن چيري حروف تݢق-چوندوڠ، ڤادت دان تيتيق دوا/تيݢ دسامبوڠ.",
+            tahapKesukaran: "EXPERT"
+          }
+        ]
+      },
+      level10: {
+        world: "FINAL ISLAMIC GRAND PRIX",
+        worldJawi: "ليۏل ١٠ · ݢريند ڤريکس اسلامي تراخير",
+        theme: "grandprix",
+        bidang: "Kemuncak Keseluruhan RPT 2026",
+        subtext: "Ujian Komprehensif Aras Tinggi: Akidah, Ibadah, Sirah, Adab & Tilawah",
+        questions: [
+          {
+            level: 10,
+            bidang: "ݢابوڠن کسلوروهن RPT",
+            minggu: "ميڠݢو ٣٩-٤٠",
+            topik: "اولڠ کاجي اخير دان اينتݢراسي علمو",
+            standardKandungan: "اينتݢراسي ستندرد کاندوڠن تاهون ٦ (KSSR سيمقن)",
+            standardPembelajaran: "مروموس کفهمن مڽلوروه علمو اسلام دالم عملن هيدوڤ برادب دان استقامة",
+            soalan: "باݢايماناکه سأورڠ مؤمن مڠݢابوڠکن کونسيڤ اوسها (اختيار)، قضاء دان قدر، دان توکل اڤابيلا مڠهادڤي ڤڤريقساءن؟",
+            jawi: "",
+            pilihanJawapan: [
+              "براوسها دان منلائه برسوڠݢوه-سوڠݢوه، بردعاء، ثم برتوکل رضا منريما اڤ جوا کتتڤن الله",
+              "هاڽ برسره تنڤا مڠولڠ کاجي ڤلاجرن کران تقدير سوده ترتوليس سجق ازلي",
+              "ڤرچاي تڠکل دان عظيمت ڤننتو کجايأن چمرلڠ",
+              "مڽالهکن تقدير جک تيدق ممڤراوليهي مرکـه ڤنوه"
+            ],
+            jawapanBetul: 0,
+            penerangan: "ڤرينسيڤ عقيدة يڠ صحيح: ماءنسي واجب براختيار مڠݢوناکن عقل دان تناݢ، ثم برتوکل دان رضا دڠن کتتڤن الله سبحانه وتعالى.",
+            tahapKesukaran: "EXPERT"
+          },
+          {
+            level: 10,
+            bidang: "سيرة دان ادب",
+            minggu: "ميڠݢو ٣٩-٤٠",
+            topik: "مشارکت هرモニ برلندسکن ڤياݢم مدينه",
+            standardKandungan: "٥٫١ دان ٦٫٤ ڤڠحياتن نيلاي مدينه دان ادب برنݢارا",
+            standardPembelajaran: "مڠاڤليکاسيکـن اعتبار ڤياݢم مدينه دالم مڠکلکن ڤرڤادوان مشارکت مجموق دمليسيا",
+            soalan: "اڤاکه ڤڠاجرن اوتاما درڤد کجايأن رسول الله ﷺ ممبنتوق نݢارا مدينه يڠ بوليه کيت عملکن دمليسيا؟",
+            jawi: "",
+            pilihanJawapan: [
+              "منجاݢ ڤرڤادوان، ساليڠ مڠحرمتي حق انتارا قوم دان برݢنديڠ باهو ممڤرتاهنکن نݢارا",
+              "ممعقسا سموا اورڠ بوکن اسلام منيڠݢلکن عادة بودايا مريک",
+              "مڠاسيڠکن تمڤت تيڠݢل مڠيکوت کلومڤوق اتنيک سمات-مات",
+              "مڠاوتاماکن ڤربالهن ڤوليتيک درڤد کستابيلن نݢارا"
+            ],
+            jawapanBetul: 0,
+            penerangan: "نبي ﷺ ممبوقتيکن بهاوا کعاديلن دان سيکڤ تسامح دالم ڤياݢم مدينه ممڤو ممبينا ڤرڤادوان کوکوه دالم مشارکت ڤلباݢاي بڠسا.",
+            tahapKesukaran: "EXPERT"
+          },
+          {
+            level: 10,
+            bidang: "القرءان (تجويد)",
+            minggu: "ميڠݢو ٣٧-٣٨",
+            topik: "حکوم مد فرق",
+            standardKandungan: "١٫٨ ممباچ ايات مڠندوڠي مد ٦ حرکة",
+            standardPembelajaran: "١٫٨٫٢ مڠنل ڤستي کلمه مد فرق",
+            soalan: "اڤاکه فوڠسي اوتاما مد فرق دالم ڤمباچاءن ايات القرءان؟",
+            jawi: "",
+            pilihanJawapan: [
+              "ممبيزاکن انتارا ايات ڤرتاڽاءن (استفهام) دڠن ايات ڤڽات (خبر)",
+              "ممڤرچڤتکن باچاءن ڤد اخير جزوق",
+              "مڠݢنتيکن باريس تنوين کتيک واقف",
+              "مننداکن تمڤت سجود تلاوة"
+            ],
+            jawapanBetul: 0,
+            penerangan: "فرق برارتي 'ڤمبيزا'. مد فرق برفوڠسي ممبيزاکن انتارا بنتوق ڤرتاڽاءن (استفهام) دڠن ڤرڽاتاءن بياسا، دڤنجڠکن ٦ حرکة.",
+            tahapKesukaran: "EXPERT"
+          }
+        ]
+      }
+    };
+
+    const CARS_DATABASE = [
+      {
+        id: "speed_racer",
+        name: "SPEED RACER",
+        color: "#06b6d4", // Cyan
+        accent: "#38bdf8",
+        price: 0,
+        unlocked: true,
+        stats: { speed: 65, accel: 70, handling: 65, durability: 3, boost: 60 },
+        desc: "Jentera seimbang dan tangkas, sangat sesuai untuk pelumba pemula di bandar."
+      },
+      {
+        id: "turbo_x",
+        name: "TURBO X",
+        color: "#f59e0b", // Amber
+        accent: "#fbbf24",
+        price: 150,
+        unlocked: false,
+        stats: { speed: 75, accel: 80, handling: 60, durability: 3, boost: 70 },
+        desc: "Enjin turbo cas berganda dengan pecutan pantas untuk laluan padang pasir."
+      },
+      {
+        id: "lightning",
+        name: "LIGHTNING",
+        color: "#ec4899", // Neon Pink
+        accent: "#f472b6",
+        price: 300,
+        unlocked: false,
+        stats: { speed: 85, accel: 75, handling: 80, durability: 4, boost: 80 },
+        desc: "Kereta aerodinamik dengan cengkaman tinggi di selekoh pergunungan tajwid."
+      },
+      {
+        id: "storm_gt",
+        name: "STORM GT",
+        color: "#10b981", // Emerald
+        accent: "#34d399",
+        price: 500,
+        unlocked: false,
+        stats: { speed: 90, accel: 85, handling: 85, durability: 4, boost: 90 },
+        desc: "Jentera berat kalis ribut dengan kestabilan unggul meredah halangan ekstrem."
+      },
+      {
+        id: "cyber_racer",
+        name: "CYBER RACER",
+        color: "#8b5cf6", // Purple Neon
+        accent: "#a78bfa",
+        price: 800,
+        unlocked: false,
+        stats: { speed: 98, accel: 95, handling: 92, durability: 5, boost: 98 },
+        desc: "Kereta prototaip masa hadapan berprestasi puncak untuk kejuaraan Grand Prix."
+      }
+    ];
+
+    const STORAGE_KEY = "race_learn_pi6_session_save_v1";
+
+    const defaultGameState = {
+      studentName: "Pelumba Bestari",
+      coins: 0,
+      score: 0,
+      currentLevel: 1,
+      unlockedLevels: [1],
+      selectedCarId: "speed_racer",
+      unlockedCarIds: ["speed_racer"],
+      carUpgradeLevels: {
+        speed_racer: 0,
+        turbo_x: 0,
+        lightning: 0,
+        storm_gt: 0,
+        cyber_racer: 0
+      },
+      quizStats: {
+        totalQuestions: 0,
+        correctAnswers: 0,
+        wrongAnswers: 0,
+        domainsMastery: {
+          "Al-Quran": { correct: 0, total: 0 },
+          "Al-Quran (Tajwid)": { correct: 0, total: 0 },
+          "Akidah": { correct: 0, total: 0 },
+          "Ibadah": { correct: 0, total: 0 },
+          "Sirah": { correct: 0, total: 0 },
+          "Hadis": { correct: 0, total: 0 },
+          "Adab": { correct: 0, total: 0 },
+          "Jawi": { correct: 0, total: 0 }
+        }
+      },
+      usedQuestionIndices: {} // Anti-repetition tracker
+    };
+
+    let gameState = { ...defaultGameState };
+
+    function loadSavedGame() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          gameState = { ...defaultGameState, ...parsed };
+        }
+      } catch (e) {
+        console.warn("Gagal membaca storan peranti, menggunakan nilai asas.");
+      }
+    }
+
+    function saveGameProgress() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+      } catch (e) {}
+    }
+
+    const canvas = document.getElementById("raceCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let isRacing = false;
+    let isCountingDown = false;
+    let animFrameId = null;
+
+    // Pembolehubah Fizik Kereta & Trek
+    let carX = 0; // -0.85 (kiri) ke 0.85 (kanan)
+    let carSpeed = 0;
+    let maxSpeed = 320;
+    let targetCruiseSpeed = 200; // Kelajuan automatik mengikut level
+    let trackDistance = 0;
+    let trackTotalLength = 2200;
+    let health = 3;
+    let nitroBoost = 100;
+    let isBoosting = false;
+    let lapStartTime = 0;
+    let activeLevelIndex = 1;
+    let roadCurve = 0;
+    let roadElevation = 0;
+
+    // Array Objek Jalanan (Syiling & Rintangan Dinamik)
+    let roadEntities = [];
+    // Array Kereta Trafik Merah Dinamik
+    let trafficCars = [];
+
+    // Sistem Visual FX Syiling (Floating Text & Particles)
+    let floatingTexts = [];
+    let coinParticles = [];
+
+    // Animated Coin Counter Variables
+    let displayedCoinCount = 0;
+    let coinCountAnimTimer = null;
+    let runInitialCoins = 0;
+
+    // Pembolehubah Input Kawalan (HANYA KIRI & KANAN)
+    const keys = { left: false, right: false };
+
+    // Fungsi Pengiraan Sempadan Jalan Sebenar untuk Kereta Pemain
+    function getRoadSteeringBounds() {
+      const w = canvas.width;
+      const h = canvas.height;
+      const horizon = h * 0.44;
+      const roadH = h - horizon;
+      
+      // Kedudukan Y kereta di bahagian bawah skrin (Dikecilkan ~12% kepada 88% daripada saiz asal)
+      const carWidth = Math.min(192, w * 0.245);
+      const carHeight = (carWidth / 160) * 100;
+      const carBottomY = h - carHeight * 0.5 - 25;
+      
+      // Kedalaman perspektif di kedudukan Y kereta (biasanya ~0.95 - 0.98)
+      const depth = Math.max(0.1, Math.min(1.0, (carBottomY - horizon) / roadH));
+      const roadWBottom = w * 0.95;
+      const roadWTop = w * 0.08;
+      const currentRoadW = roadWTop + (roadWBottom - roadWTop) * Math.pow(depth, 2.2);
+
+      // Lebar separuh jalan di kedudukan kereta ditolak separuh lebar kereta dan margin keselamatan (10px)
+      const safeMargin = 10;
+      const maxAllowedPixelOffset = (currentRoadW * 0.5) - (carWidth * 0.5) - safeMargin;
+
+      // Unjuran lateral kereta menggunakan faktor unjuran (w * 0.38)
+      const lateralScale = Math.max(10, w * 0.38);
+      const maxCarX = Math.max(0.3, Math.min(0.85, maxAllowedPixelOffset / lateralScale));
+      
+      return {
+        minX: -maxCarX,
+        maxX: maxCarX,
+        carWidth: carWidth,
+        carHeight: carHeight,
+        lateralScale: lateralScale
+      };
+    }
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    // Jana SVG Kereta Mengikut Rekaan
+    function getCarSvgString(carData, width = 160, height = 100) {
+      return `
+        <svg width="${width}" height="${height}" viewBox="0 0 160 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Bayang Bawah -->
+          <ellipse cx="80" cy="85" rx="65" ry="12" fill="rgba(0,0,0,0.5)" filter="blur(4px)"/>
+          <!-- Roda Kiri & Kanan -->
+          <rect x="18" y="45" width="16" height="36" rx="6" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+          <rect x="126" y="45" width="16" height="36" rx="6" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+          <!-- Badan Kereta Belakang & Spoiler -->
+          <path d="M25 70 L135 70 L125 58 L35 58 Z" fill="#0f172a"/>
+          <rect x="22" y="38" width="116" height="6" rx="3" fill="${carData.accent}"/>
+          <rect x="42" y="44" width="6" height="15" fill="#334155"/>
+          <rect x="112" y="44" width="6" height="15" fill="#334155"/>
+          <!-- Kerangka Aerodinamik Utama -->
+          <path d="M35 75 Q40 30 75 25 L85 25 Q120 30 125 75 Z" fill="${carData.color}"/>
+          <!-- Bumbung & Cermin Hadapan Gelap -->
+          <path d="M50 48 Q55 32 80 30 Q105 32 110 48 Z" fill="#090d16" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+          <!-- Lampu Neon Belakang -->
+          <rect x="42" y="68" width="22" height="5" rx="2" fill="#ef4444" filter="drop-shadow(0 0 5px #ef4444)"/>
+          <rect x="96" y="68" width="22" height="5" rx="2" fill="#ef4444" filter="drop-shadow(0 0 5px #ef4444)"/>
+          <!-- Jalur Lumba Neon -->
+          <line x1="80" y1="25" x2="80" y2="75" stroke="${carData.accent}" stroke-width="4" stroke-dasharray="10 4"/>
+          <!-- Ekzos Api jika boost -->
+          ${isBoosting ? `
+            <polygon points="46,74 58,74 52,95" fill="#f59e0b" filter="drop-shadow(0 0 8px #fbbf24)"/>
+            <polygon points="102,74 114,74 108,95" fill="#f59e0b" filter="drop-shadow(0 0 8px #fbbf24)"/>
+            <polygon points="49,74 55,74 52,88" fill="#38bdf8"/>
+            <polygon points="105,74 111,74 108,88" fill="#38bdf8"/>
+          ` : ''}
+        </svg>
+      `;
+    }
+
+    // Bina Halangan, Kereta Trafik Merah & Syiling dengan Safe Path System
+    function generateLevelTrack(levelNum) {
+      roadEntities = [];
+      trafficCars = [];
+      trackDistance = 0;
+      trackTotalLength = 2000 + levelNum * 350;
+      
+      const obstacleTypes = [
+        { type: "barrier", emoji: "🚧", w: 0.18, name: "Roadblock" },
+        { type: "oil", emoji: "🛢️", w: 0.16, name: "Tumpahan Minyak" },
+        { type: "rock", emoji: "🪨", w: 0.18, name: "Batu Runtuh" },
+        { type: "fire", emoji: "🔥", w: 0.18, name: "Api Bahaya" },
+        { type: "energy", emoji: "⚡", w: 0.20, name: "Penghalang Tenaga" }
+      ];
+
+      // Definisi 3 Lorong Utama Jalan (Left, Center, Right)
+      const LANES = [-0.65, 0.0, 0.65];
+      const step = Math.max(140, 240 - levelNum * 8);
+
+      // 1. Taburan Halangan Statik (Batu dsb.) dengan Safe Lane terjamin
+      for (let dist = 320; dist < trackTotalLength - 220; dist += step) {
+        // Tentukan 1 lorong selamat (Safe Lane) yang dijamin kosong
+        const safeLaneIdx = Math.floor(Math.random() * 3);
+        const obsLaneCandidates = [0, 1, 2].filter(idx => idx !== safeLaneIdx);
+        const chosenObsLaneIdx = obsLaneCandidates[Math.floor(Math.random() * obsLaneCandidates.length)];
+        const obsLane = LANES[chosenObsLaneIdx];
+
+        // Letakkan syiling di Safe Lane untuk memandu arah murid
+        roadEntities.push({
+          distance: dist - 25,
+          lane: LANES[safeLaneIdx],
+          isCoin: true,
+          value: (dist % 400 === 0) ? 10 : (dist % 200 === 0 ? 5 : 1),
+          collected: false
+        });
+
+        // Taburan Halangan Statik
+        const obsType = obstacleTypes[(levelNum + Math.floor(dist / 200)) % obstacleTypes.length];
+        roadEntities.push({
+          distance: dist,
+          lane: obsLane,
+          isCoin: false,
+          type: obsType.type,
+          emoji: obsType.emoji,
+          width: obsType.w,
+          hit: false
+        });
+      }
+
+      // Garisan Penamat (Finish Line)
+      roadEntities.push({
+        distance: trackTotalLength,
+        isFinishLine: true
+      });
+
+      // 2. Penjanaan Kereta Trafik Merah dengan Jarak Selamat & Saiz Seimbang
+      // Bilangan: LV1=2, LV2=3, LV3=4, LV4=5, LV5=6, LV6=7, LV7=8, LV8=9, LV9=10, LV10=12
+      const trafficCountByLevel = [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12];
+      const count = trafficCountByLevel[Math.min(10, Math.max(1, levelNum))] || 2;
+      
+      const baseTrafficSpeed = targetCruiseSpeed * (0.40 + (levelNum * 0.03));
+      const segmentSpacing = (trackTotalLength - 550) / count;
+
+      for (let t = 0; t < count; t++) {
+        // Pastikan jarak longitudinal cukup selesa (minimum 120m per kereta)
+        let candidateDist = 400 + (t * segmentSpacing) + (Math.random() * 50);
+        let chosenLane = LANES[t % LANES.length];
+
+        // Pastikan tidak bertembung betul-betul di atas batu statik (buffer sekurang-kurangnya 40m)
+        const nearObs = roadEntities.find(e => !e.isCoin && !e.isFinishLine && Math.abs(e.distance - candidateDist) < 45);
+        if (nearObs) {
+          candidateDist += 55; // Anjak jarak ke hadapan supaya laluan tidak tersekat serentak
+          // Pilih lorong yang berbeza daripada halangan statik tersebut
+          const openLanes = LANES.filter(l => Math.abs(l - nearObs.lane) > 0.3);
+          if (openLanes.length > 0) chosenLane = openLanes[Math.floor(Math.random() * openLanes.length)];
+        }
+
+        trafficCars.push({
+          id: `traffic_${t}`,
+          distance: candidateDist,
+          lane: chosenLane,
+          speed: baseTrafficSpeed + (Math.random() * 12 - 6),
+          width: 0.16, // Collision box lebih kecil & tepat (sepadan saiz visual 75%)
+          hitCooldown: 0
+        });
+      }
+    }
+
+    function startRacingSession(lvlNum) {
+      activeLevelIndex = lvlNum;
+      isRacing = false;
+      isCountingDown = true;
+      health = 3;
+      nitroBoost = 100;
+      isBoosting = false;
+      carSpeed = 0;
+      carX = 0;
+      keys.left = false;
+      keys.right = false;
+      floatingTexts = [];
+      coinParticles = [];
+      runInitialCoins = gameState.coins;
+      displayedCoinCount = gameState.coins;
+
+      // Ambil data kereta terpilih
+      const carData = CARS_DATABASE.find(c => c.id === gameState.selectedCarId) || CARS_DATABASE[0];
+      const upgradeLv = gameState.carUpgradeLevels[carData.id] || 0;
+
+      // Kelajuan ditentukan oleh level: LV1 santai/mudah hingga LV10 sangat laju
+      targetCruiseSpeed = 150 + (lvlNum * 18) + (carData.stats.speed * 0.4) + (upgradeLv * 6);
+      maxSpeed = targetCruiseSpeed * 1.1;
+
+      generateLevelTrack(lvlNum);
+
+      // Kemas kini Paparan Antara Muka (UI HUD)
+      document.getElementById("homeScreen").classList.add("hidden");
+      document.getElementById("worldMapModal").classList.add("hidden");
+      document.getElementById("garageModal").classList.add("hidden");
+      document.getElementById("quizModal").classList.add("hidden");
+      document.getElementById("levelSummaryModal").classList.add("hidden");
+      document.getElementById("championModal").classList.add("hidden");
+      document.getElementById("hudOverlay").classList.remove("hidden");
+
+      const levelInfo = RPT_DATABASE[`level${lvlNum}`] || RPT_DATABASE.level1;
+      document.getElementById("hudLevelTitle").innerText = `LV.${lvlNum} - ${levelInfo.world}`;
+      updateHudElements();
+
+      audio.init();
+
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      renderRaceScene(); // Lukis satu frame awal kereta di garisan permulaan
+
+      // Mulakan Countdown 3-2-1-GO sebelum pergerakan bermula
+      runCountdown(() => {
+        isCountingDown = false;
+        isRacing = true;
+        lapStartTime = Date.now();
+        lastFrameTime = performance.now();
+        animFrameId = requestAnimationFrame(gameLoop);
+      });
+    }
+
+    function runCountdown(onComplete) {
+      const overlay = document.getElementById("countdownOverlay");
+      const text = document.getElementById("countdownText");
+      if (!overlay || !text) {
+        onComplete();
+        return;
+      }
+
+      overlay.classList.remove("hidden");
+      let count = 3;
+
+      function updateCount() {
+        if (count > 0) {
+          text.innerText = count;
+          text.className = "font-arcade font-black text-8xl md:text-9xl text-amber-300 drop-shadow-[0_0_40px_rgba(251,191,36,0.9)] animate-pulse scale-110 transition-transform duration-200";
+          audio.playCountdownBeep(false);
+          count--;
+          setTimeout(updateCount, 1000);
+        } else if (count === 0) {
+          text.innerText = "GO!";
+          text.className = "font-arcade font-black text-8xl md:text-9xl text-emerald-400 drop-shadow-[0_0_50px_rgba(52,211,153,1)] scale-125 transition-transform duration-150";
+          audio.playCountdownBeep(true);
+          count--;
+          setTimeout(() => {
+            overlay.classList.add("hidden");
+            onComplete();
+          }, 800);
+        }
+      }
+
+      updateCount();
+    }
+
+    let lastFrameTime = performance.now();
+
+    function gameLoop(currentTime) {
+      if (!isRacing) return;
+
+      const dt = Math.min((currentTime - lastFrameTime) / 1000, 0.1);
+      lastFrameTime = currentTime;
+
+      updatePhysics(dt);
+      renderRaceScene();
+
+      animFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function updatePhysics(dt) {
+      const carData = CARS_DATABASE.find(c => c.id === gameState.selectedCarId) || CARS_DATABASE[0];
+      const upgradeLv = gameState.carUpgradeLevels[carData.id] || 0;
+      // Ditingkatkan kelajuan stereng lateral (responsif, lancar dan tangkas berpindah lorong)
+      const handlingRate = (2.4 + carData.stats.handling * 0.02 + upgradeLv * 0.1);
+
+      // 1. AUTO FORWARD: Kelajuan meningkat secara automatik ke target kelajuan level
+      if (carSpeed < targetCruiseSpeed) {
+        carSpeed += (targetCruiseSpeed * 1.8) * dt;
+        if (carSpeed > targetCruiseSpeed) carSpeed = targetCruiseSpeed;
+      } else if (carSpeed > targetCruiseSpeed) {
+        carSpeed -= 90 * dt;
+      }
+
+      // 2. KAWALAN MURID: HANYA KIRI & KANAN (Forward movement tidak terhenti)
+      if (keys.left) {
+        carX -= handlingRate * dt;
+      }
+      if (keys.right) {
+        carX += handlingRate * dt;
+      }
+
+      // 3. ROAD-BOUNDARY STEERING: Had sempadan dikira terus daripada geometri jalan sebenar
+      // Memastikan tayar dan badan kereta kekal di atas asfalt/kerb dan TIDAK sesekali masuk ke kawasan rumput
+      const bounds = getRoadSteeringBounds();
+      carX = Math.max(bounds.minX, Math.min(bounds.maxX, carX));
+
+      // 4. Anjakan Jarak Perlumbaan Ke Hadapan
+      const forwardMove = (carSpeed * 0.8) * dt;
+      trackDistance += forwardMove;
+
+      // 5. Kemas kini Kereta Trafik Merah (Maju lurus ke hadapan & Respawn Selamat)
+      const LANES = [-0.65, 0.0, 0.65];
+      trafficCars.forEach(tc => {
+        tc.distance += (tc.speed * 0.8) * dt;
+
+        if (tc.hitCooldown > 0) {
+          tc.hitCooldown -= dt;
+        }
+
+        // Jika kereta pemain melepasi kereta merah melebihi 160 meter ke belakang, kitar semula jauh ke hadapan
+        if (trackDistance - tc.distance > 160) {
+          let newDist = trackDistance + 650 + (Math.random() * 250);
+          let newLane = LANES[Math.floor(Math.random() * LANES.length)];
+
+          // Pastikan respawn tidak bertindih dengan halangan statik sedia ada
+          const conflictObs = roadEntities.find(e => !e.isCoin && !e.isFinishLine && Math.abs(e.distance - newDist) < 45);
+          if (conflictObs) {
+            newDist += 60;
+            const alternateLanes = LANES.filter(l => Math.abs(l - conflictObs.lane) > 0.3);
+            if (alternateLanes.length > 0) newLane = alternateLanes[0];
+          }
+
+          tc.distance = newDist;
+          tc.lane = newLane;
+          tc.hitCooldown = 0;
+        }
+        else if (tc.distance - trackDistance > 1150) {
+          tc.distance = trackDistance + 520 + (Math.random() * 200);
+        }
+      });
+
+      // Keluk Jalan Dinamik
+      roadCurve = Math.sin(trackDistance * 0.003) * 0.55;
+
+      // Bunyi Enjin
+      if (Math.random() < 0.18) {
+        audio.playEngine(carSpeed / targetCruiseSpeed);
+      }
+
+      // Periksa Perlanggaran (Collision Detection)
+      checkEntityCollisions();
+
+      // Periksa Garisan Penamat
+      if (trackDistance >= trackTotalLength) {
+        triggerFinishLine();
+        return;
+      }
+
+      // Kemas kini Paparan Real-Time HUD
+      updateHudElements();
+    }
+
+    function checkEntityCollisions() {
+      // 1. Semakan Objek Jalanan (Syiling & Rintangan Statik)
+      roadEntities.forEach(ent => {
+        const distDelta = ent.distance - trackDistance;
+        
+        // Objek berada berdekatan kedudukan bumper kereta (Hitbox diselaraskan dengan saiz 88%)
+        if (distDelta > -9 && distDelta < 24) {
+          if (ent.isCoin && !ent.collected) {
+            // Semak jarak lorong syiling
+            if (Math.abs(carX - ent.lane) < 0.25) {
+              ent.collected = true;
+              
+              // Tambah nilai syiling sebenar & markah
+              triggerCoinCollection(ent.value, ent.lastScreenX || (canvas.width * 0.5), ent.lastScreenY || (canvas.height - 100));
+            }
+          } else if (!ent.isCoin && !ent.isFinishLine && !ent.hit) {
+            // Semak perlanggaran halangan batu/rintangan (Hitbox kemas dan tepat)
+            if (Math.abs(carX - ent.lane) < (ent.width || 0.21)) {
+              ent.hit = true;
+              health--;
+              carSpeed *= 0.4; // Perlahan serta-merta
+              audio.playCrash();
+              triggerCameraShake();
+              
+              if (health <= 0) {
+                handleGameOver();
+              }
+            }
+          }
+        }
+      });
+
+      // 2. Semakan Perlanggaran Kereta Trafik Merah
+      trafficCars.forEach(tc => {
+        const distDelta = tc.distance - trackDistance;
+        // Jarak bumper depan ke belakang diselaraskan dengan saiz pemain (distDelta: -8 hingga 16)
+        if (distDelta > -8 && distDelta < 16) {
+          if (Math.abs(carX - tc.lane) < (tc.width || 0.15)) {
+            if (tc.hitCooldown <= 0) {
+              tc.hitCooldown = 1.5; // Elak perlanggaran bertubi-tubi
+              health--;
+              carSpeed *= 0.55; // Perlahan sederhana (bukan berhenti mendadak)
+              audio.playCrash();
+              triggerCameraShake();
+
+              if (health <= 0) {
+                handleGameOver();
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Fungsi Pengutipan Syiling: Animasi Floating Text, Partikel & Animated Counting
+    function triggerCoinCollection(amount, originX, originY) {
+      gameState.coins += amount;
+      gameState.score += amount * 25;
+      audio.playCoin();
+      nitroBoost = Math.min(100, nitroBoost + 8);
+
+      // 1. Tambah Floating Text (+1 COIN / +5 COINS / +10 COINS)
+      floatingTexts.push({
+        text: `+${amount} ${amount > 1 ? 'COINS' : 'COIN'}`,
+        x: originX,
+        y: originY,
+        opacity: 1.0,
+        scale: 1.2,
+        color: amount >= 10 ? '#fde047' : (amount >= 5 ? '#f59e0b' : '#38bdf8'),
+        life: 1.0 // Saat hidup
+      });
+
+      // 2. Tambah Letusan Partikel Syiling Berkilau (Sparkle Particles)
+      const particleCount = 10 + amount * 2;
+      for (let p = 0; p < particleCount; p++) {
+        const angle = Math.random() * Math.PI * 2;
+        const spd = 60 + Math.random() * 140;
+        coinParticles.push({
+          x: originX,
+          y: originY,
+          vx: Math.cos(angle) * spd,
+          vy: Math.sin(angle) * spd - 40,
+          color: Math.random() > 0.4 ? '#fbbf24' : '#ffffff',
+          size: 2.5 + Math.random() * 3,
+          life: 0.6 + Math.random() * 0.4,
+          maxLife: 0.6 + Math.random() * 0.4
+        });
+      }
+
+      // 3. Smooth Step-by-Step Animated Counting ke HUD
+      animateCoinCounter();
+    }
+
+    // Menggerakkan nombor syiling langkah demi langkah (3 -> 4 -> 5 ...)
+    function animateCoinCounter() {
+      if (coinCountAnimTimer) return;
+
+      const target = gameState.coins;
+      const stepInterval = Math.max(30, Math.min(80, Math.floor(400 / Math.max(1, target - displayedCoinCount))));
+
+      coinCountAnimTimer = setInterval(() => {
+        if (displayedCoinCount < target) {
+          displayedCoinCount++;
+          const coinElem = document.getElementById("hudCoins");
+          if (coinElem) {
+            coinElem.innerText = displayedCoinCount;
+            // Kesan pop/glow lembut sewaktu mengira
+            coinElem.classList.add("scale-125", "text-yellow-200");
+            setTimeout(() => {
+              coinElem.classList.remove("scale-125", "text-yellow-200");
+            }, 50);
+          }
+        } else if (displayedCoinCount > target) {
+          displayedCoinCount = target;
+          const coinElem = document.getElementById("hudCoins");
+          if (coinElem) coinElem.innerText = displayedCoinCount;
+          clearInterval(coinCountAnimTimer);
+          coinCountAnimTimer = null;
+        } else {
+          clearInterval(coinCountAnimTimer);
+          coinCountAnimTimer = null;
+        }
+      }, stepInterval);
+    }
+
+    let shakeOffset = { x: 0, y: 0 };
+    function triggerCameraShake() {
+      shakeOffset = {
+        x: (Math.random() - 0.5) * 20,
+        y: (Math.random() - 0.5) * 20
+      };
+      setTimeout(() => { shakeOffset = { x: 0, y: 0 }; }, 250);
+    }
+
+    function updateHudElements() {
+      document.getElementById("hudSpeed").innerHTML = `${Math.floor(carSpeed)} <span class="text-xs font-normal text-slate-400">KM/H</span>`;
+      
+      // Jika tiada animasi aktif, pastikan nilai sepadan
+      if (!coinCountAnimTimer) {
+        document.getElementById("hudCoins").innerText = gameState.coins;
+        displayedCoinCount = gameState.coins;
+      }
+      
+      document.getElementById("hudScore").innerText = gameState.score;
+      
+      const heartsStr = "❤️".repeat(Math.max(0, health)) + "🖤".repeat(Math.max(0, 3 - health));
+      document.getElementById("hudHearts").innerText = heartsStr;
+
+      const progressPercent = Math.min(100, (trackDistance / trackTotalLength) * 100);
+      document.getElementById("hudProgressBar").style.width = `${progressPercent}%`;
+
+      document.getElementById("hudBoostBar").style.width = `${nitroBoost}%`;
+      const boostText = document.getElementById("hudBoostText");
+      if (nitroBoost > 80) {
+        boostText.innerText = "MAX NITRO!";
+        boostText.className = "text-[10px] font-arcade text-emerald-400 font-bold";
+      } else if (nitroBoost > 25) {
+        boostText.innerText = "BOOST READY";
+        boostText.className = "text-[10px] font-arcade text-amber-300";
+      } else {
+        boostText.innerText = "CHARGING...";
+        boostText.className = "text-[10px] font-arcade text-slate-500";
+      }
+    }
+
+    function renderRaceScene() {
+      ctx.save();
+      ctx.translate(shakeOffset.x, shakeOffset.y);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const w = canvas.width;
+      const h = canvas.height;
+      const horizon = h * 0.44;
+
+      // 1. Latar Belakang Langit & Horizon mengikut Tema Dunia
+      renderWorldSky(w, horizon);
+
+      // 2. Garisan Kelajuan Nitro (Speed Lines) jika memecut
+      if (isBoosting || carSpeed > maxSpeed * 0.9) {
+        renderSpeedLines(w, h, horizon);
+      }
+
+      // 3. Render Lebuhraya Pseudo-3D
+      renderRoadway(w, h, horizon);
+
+      // 4. Render Objek Jalanan (Syiling, Halangan & Garisan Penamat)
+      renderEntitiesOnRoad(w, h, horizon);
+
+      // 5. Render Kereta Pelumba di Bahagian Bawah Skrin
+      renderPlayerCar(w, h);
+
+      // 6. Render Floating FX & Partikel Syiling
+      renderCoinFX();
+
+      ctx.restore();
+    }
+
+    function renderWorldSky(w, horizon) {
+      const grad = ctx.createLinearGradient(0, 0, 0, horizon);
+      
+      // Warna mengikut level
+      if (activeLevelIndex === 2) { // Padang pasir
+        grad.addColorStop(0, "#d97706");
+        grad.addColorStop(0.7, "#f59e0b");
+        grad.addColorStop(1, "#fbbf24");
+      } else if (activeLevelIndex === 6) { // Malam
+        grad.addColorStop(0, "#020617");
+        grad.addColorStop(0.8, "#0f172a");
+        grad.addColorStop(1, "#1e1b4b");
+      } else if (activeLevelIndex === 8) { // Ribut Petir
+        grad.addColorStop(0, "#111827");
+        grad.addColorStop(0.6, "#374151");
+        grad.addColorStop(1, "#4b5563");
+      } else if (activeLevelIndex === 10) { // Grand Prix Neon
+        grad.addColorStop(0, "#311042");
+        grad.addColorStop(0.7, "#1e1035");
+        grad.addColorStop(1, "#0f172a");
+      } else { // Standard Biru Futuristik
+        grad.addColorStop(0, "#082f49");
+        grad.addColorStop(0.7, "#0c4a6e");
+        grad.addColorStop(1, "#0369a1");
+      }
+
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, horizon);
+
+      // Siluet Bukit / Bandar di kaki horizon
+      ctx.fillStyle = "rgba(10, 15, 30, 0.7)";
+      ctx.beginPath();
+      ctx.moveTo(0, horizon);
+      for (let x = 0; x <= w; x += 60) {
+        const peak = Math.sin((x + trackDistance * 0.1) * 0.01) * 35;
+        ctx.lineTo(x, horizon - 20 - peak);
+      }
+      ctx.lineTo(w, horizon);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function renderRoadway(w, h, horizon) {
+      const roadH = h - horizon;
+      const roadWBottom = w * 0.95;
+      const roadWTop = w * 0.08;
+      const lateralScale = w * 0.38;
+      const centerXBottom = w * 0.5 + (roadCurve * w * 0.12);
+      const centerXTop = w * 0.5 + (roadCurve * w * 0.25);
+
+      // Tanah Tepi Jalan (Grass / Desert / Shoulder)
+      ctx.fillStyle = (activeLevelIndex === 2) ? "#b45309" : "#064e3b";
+      ctx.fillRect(0, horizon, w, roadH);
+
+      // Jalur Asfalt Jalan Utama
+      ctx.fillStyle = "#1e293b";
+      ctx.beginPath();
+      ctx.moveTo(centerXTop - roadWTop * 0.5, horizon);
+      ctx.lineTo(centerXTop + roadWTop * 0.5, horizon);
+      ctx.lineTo(centerXBottom + roadWBottom * 0.5, h);
+      ctx.lineTo(centerXBottom - roadWBottom * 0.5, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // Bahu Jalan Berbelang (Kerbs Merah-Putih / Cyan-Gold)
+      const numSegments = 24;
+      for (let i = 0; i < numSegments; i++) {
+        const p1 = i / numSegments;
+        const p2 = (i + 1) / numSegments;
+        
+        // Pseudo perspective interpolation
+        const y1 = horizon + Math.pow(p1, 2) * roadH;
+        const y2 = horizon + Math.pow(p2, 2) * roadH;
+        
+        const rw1 = roadWTop + (roadWBottom - roadWTop) * Math.pow(p1, 2);
+        const rw2 = roadWTop + (roadWBottom - roadWTop) * Math.pow(p2, 2);
+
+        const cx1 = centerXTop + (centerXBottom - centerXTop) * p1;
+        const cx2 = centerXTop + (centerXBottom - centerXTop) * p2;
+
+        const isEven = (Math.floor((trackDistance * 0.1) + i) % 2 === 0);
+        ctx.fillStyle = isEven ? "#f87171" : "#ffffff";
+
+        // Kerb Kiri
+        ctx.beginPath();
+        ctx.moveTo(cx1 - rw1 * 0.5 - rw1 * 0.06, y1);
+        ctx.lineTo(cx1 - rw1 * 0.5, y1);
+        ctx.lineTo(cx2 - rw2 * 0.5, y2);
+        ctx.lineTo(cx2 - rw2 * 0.5 - rw2 * 0.06, y2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Kerb Kanan
+        ctx.beginPath();
+        ctx.moveTo(cx1 + rw1 * 0.5, y1);
+        ctx.lineTo(cx1 + rw1 * 0.5 + rw1 * 0.06, y1);
+        ctx.lineTo(cx2 + rw2 * 0.5 + rw2 * 0.06, y2);
+        ctx.lineTo(cx2 + rw2 * 0.5, y2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Garisan Putih Pembahagi Lorong Tengah
+        if (isEven) {
+          ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+          const lw1 = Math.max(2, rw1 * 0.015);
+          const lw2 = Math.max(3, rw2 * 0.015);
+          ctx.beginPath();
+          ctx.moveTo(cx1 - lw1 * 0.5, y1);
+          ctx.lineTo(cx1 + lw1 * 0.5, y1);
+          ctx.lineTo(cx2 + lw2 * 0.5, y2);
+          ctx.lineTo(cx2 - lw2 * 0.5, y2);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+    }
+
+    function renderEntitiesOnRoad(w, h, horizon) {
+      const roadH = h - horizon;
+      const roadWBottom = w * 0.95;
+      const roadWTop = w * 0.08;
+      const centerXBottom = w * 0.5 + (roadCurve * w * 0.12);
+      const centerXTop = w * 0.5 + (roadCurve * w * 0.25);
+
+      // Gabungkan objek jalanan dan kereta trafik untuk susunan z-index (jauh ke dekat)
+      const renderList = [];
+
+      roadEntities.forEach(ent => {
+        const d = ent.distance - trackDistance;
+        if (d > 0 && d < 700) {
+          renderList.push({
+            isTraffic: false,
+            distance: ent.distance,
+            data: ent
+          });
+        }
+      });
+
+      trafficCars.forEach(tc => {
+        const d = tc.distance - trackDistance;
+        if (d > -20 && d < 700) {
+          renderList.push({
+            isTraffic: true,
+            distance: tc.distance,
+            data: tc
+          });
+        }
+      });
+
+      // Susun dari jauh ke dekat
+      renderList.sort((a, b) => b.distance - a.distance);
+
+      renderList.forEach(item => {
+        const distDelta = item.distance - trackDistance;
+        const depth = 1 - (distDelta / 700); // 0 (horizon) ke 1 (bawah skrin)
+        if (depth <= 0) return;
+
+        const screenY = horizon + Math.pow(depth, 2.2) * roadH;
+        const currentRoadW = roadWTop + (roadWBottom - roadWTop) * Math.pow(depth, 2.2);
+        const currentCenterX = centerXTop + (centerXBottom - centerXTop) * depth;
+        const scale = Math.max(0.18, depth * 1.5);
+
+        if (item.isTraffic) {
+          // Render Kereta Trafik Merah
+          const tc = item.data;
+          const screenX = currentCenterX + (tc.lane || 0) * (currentRoadW * 0.45);
+          renderTrafficCarModel(screenX, screenY, scale);
+        } else {
+          // Render Objek Jalanan Biasa
+          const ent = item.data;
+          const screenX = currentCenterX + (ent.lane || 0) * (currentRoadW * 0.45);
+
+          if (ent.isFinishLine) {
+            // Garisan Penamat Berpapan Tanda
+            ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+            ctx.fillRect(currentCenterX - currentRoadW * 0.5, screenY - 5, currentRoadW, 14 * scale);
+            ctx.fillStyle = "#000000";
+            for (let c = 0; c < 12; c++) {
+              if (c % 2 === 0) {
+                ctx.fillRect(currentCenterX - currentRoadW * 0.5 + (c * (currentRoadW / 12)), screenY - 5, currentRoadW / 12, 14 * scale);
+              }
+            }
+            // Papan Gerbang Penamat
+            ctx.font = `bold ${Math.floor(22 * scale)}px Orbitron`;
+            ctx.fillStyle = "#facc15";
+            ctx.textAlign = "center";
+            ctx.fillText("🏁 FINISH LINE 🏁", currentCenterX, screenY - 25 * scale);
+          } else if (ent.isCoin && !ent.collected) {
+            // Simpan koordinat skrin semasa untuk floating text bila dikutip
+            ent.lastScreenX = screenX;
+            ent.lastScreenY = screenY;
+
+            // Animasi Putaran Syiling (3D-like Coin Spin) & Kilauan
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            
+            // Formula putaran 3D eliptik dengan kesan sin/cos
+            const spinTime = Date.now() * 0.006 + ent.distance;
+            const spinScaleX = Math.cos(spinTime); // -1 hingga 1
+            const coinRadius = 15 * scale;
+            
+            // Bayangan tanah
+            ctx.fillStyle = "rgba(0,0,0,0.3)";
+            ctx.beginPath();
+            ctx.ellipse(0, 4 * scale, coinRadius * 0.9, coinRadius * 0.25, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Badan Syiling Berputar
+            ctx.scale(Math.abs(spinScaleX) < 0.15 ? 0.15 : spinScaleX, 1);
+            
+            // Bahagian tepi syiling (rim effect)
+            ctx.beginPath();
+            ctx.arc(0, -18 * scale, coinRadius, 0, Math.PI * 2);
+            ctx.fillStyle = ent.value >= 10 ? "#d97706" : (ent.value >= 5 ? "#b45309" : "#ca8a04");
+            ctx.fill();
+            
+            // Muka dalaman syiling
+            ctx.beginPath();
+            ctx.arc(0, -18 * scale, coinRadius * 0.82, 0, Math.PI * 2);
+            ctx.fillStyle = ent.value >= 10 ? "#fde047" : (ent.value >= 5 ? "#fbbf24" : "#eab308");
+            ctx.fill();
+            
+            ctx.lineWidth = 2 * scale;
+            ctx.strokeStyle = "#ffffff";
+            ctx.stroke();
+
+            // Label Nilai Syiling (+1 / +5 / +10)
+            if (Math.abs(spinScaleX) > 0.35) {
+              ctx.fillStyle = "#78350f";
+              ctx.font = `black ${Math.max(8, Math.floor(11 * scale))}px Orbitron, sans-serif`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText(ent.value, 0, -18 * scale);
+            }
+
+            ctx.restore();
+          } else if (!ent.isCoin && !ent.hit) {
+            // Halangan Batu / Rintangan Tanpa Sebarang Nombor
+            ctx.save();
+            ctx.font = `${Math.floor(34 * scale)}px sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "bottom";
+            // Bayang bawah
+            ctx.fillStyle = "rgba(0,0,0,0.35)";
+            ctx.beginPath();
+            ctx.ellipse(screenX, screenY, 18 * scale, 6 * scale, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Paparkan rupa halangan
+            ctx.fillText(ent.emoji, screenX, screenY);
+            ctx.restore();
+          }
+        }
+      });
+    }
+    // Melukis Model Kereta Merah (Traffic Car) mengikut saiz 75%-80% yang lebih seimbang
+    function renderTrafficCarModel(x, y, scale) {
+      ctx.save();
+      ctx.translate(x, y);
+      // Dikecilkan kira-kira 25% (scale * 0.64 berbanding scale * 0.85 sebelumnya)
+      ctx.scale(scale * 0.64, scale * 0.64);
+
+      // Bayangan bawah kereta merah
+      ctx.fillStyle = "rgba(0,0,0,0.40)";
+      ctx.beginPath();
+      ctx.ellipse(0, 5, 46, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Tayar kiri & kanan belakang
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(-44, -22, 12, 24);
+      ctx.fillRect(32, -22, 12, 24);
+
+      // Bampar belakang & peresap
+      ctx.fillStyle = "#1e293b";
+      ctx.beginPath();
+      ctx.roundRect(-38, -12, 76, 16, 4);
+      ctx.fill();
+
+      // Badan utama kereta merah (Crimson Red Premium)
+      ctx.fillStyle = "#dc2626";
+      ctx.beginPath();
+      ctx.moveTo(-35, -12);
+      ctx.lineTo(35, -12);
+      ctx.lineTo(28, -40);
+      ctx.lineTo(-28, -40);
+      ctx.closePath();
+      ctx.fill();
+
+      // Spoiler Belakang
+      ctx.fillStyle = "#991b1b";
+      ctx.fillRect(-32, -44, 64, 4);
+      ctx.fillStyle = "#450a0a";
+      ctx.fillRect(-23, -40, 4, 5);
+      ctx.fillRect(19, -40, 4, 5);
+
+      // Bumbung & Cermin Belakang Gelap
+      ctx.fillStyle = "#090d16";
+      ctx.beginPath();
+      ctx.moveTo(-20, -28);
+      ctx.lineTo(20, -28);
+      ctx.lineTo(15, -39);
+      ctx.lineTo(-15, -39);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.25)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Lampu Belakang Neon Merah
+      ctx.fillStyle = "#f87171";
+      ctx.shadowColor = "#ef4444";
+      ctx.shadowBlur = 6;
+      ctx.fillRect(-30, -17, 13, 4);
+      ctx.fillRect(17, -17, 13, 4);
+      ctx.shadowBlur = 0;
+
+      // Jalur Belakang Kuning / Amber
+      ctx.fillStyle = "#f59e0b";
+      ctx.fillRect(-7, -16, 14, 2.5);
+
+      ctx.restore();
+    }
+
+    // Render Kereta Pemain di Bahagian Bawah Skrin
+    function renderPlayerCar(w, h) {
+      const carData = CARS_DATABASE.find(c => c.id === gameState.selectedCarId) || CARS_DATABASE[0];
+      const carImg = getOrCreateCarImage(carData);
+      const bounds = getRoadSteeringBounds();
+
+      const carWidth = bounds.carWidth;
+      const carHeight = bounds.carHeight;
+      const centerXBottom = w * 0.5 + (roadCurve * w * 0.12);
+      
+      // Kedudukan X kereta berpusat tepat pada geometri jalan raya semasa
+      const posX = centerXBottom + (carX * bounds.lateralScale) - (carWidth * 0.5);
+      const posY = h - carHeight - 25;
+
+      // Lukis bayang bawah kereta
+      ctx.save();
+      ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+      ctx.beginPath();
+      ctx.ellipse(posX + carWidth * 0.5, posY + carHeight * 0.88, carWidth * 0.42, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Render imej kereta SVG jika sudah siap dimuatkan, atau lukis fallback
+      if (carImg && carImg.complete && carImg.naturalWidth > 0) {
+        ctx.drawImage(carImg, posX, posY, carWidth, carHeight);
+      } else {
+        // Fallback langsung jika imej belum render
+        ctx.save();
+        ctx.translate(posX + carWidth * 0.5, posY + carHeight * 0.5);
+        ctx.fillStyle = carData.color;
+        ctx.beginPath();
+        ctx.roundRect(-carWidth * 0.35, -carHeight * 0.25, carWidth * 0.7, carHeight * 0.5, 12);
+        ctx.fill();
+        ctx.fillStyle = carData.accent;
+        ctx.fillRect(-carWidth * 0.3, -carHeight * 0.05, carWidth * 0.6, 6);
+        ctx.restore();
+      }
+    }
+
+    // Render Animasi Teks Melayang (+1 COIN) & Partikel Syiling
+    function renderCoinFX() {
+      // 1. Kemas kini & lukis partikel syiling
+      for (let i = coinParticles.length - 1; i >= 0; i--) {
+        const p = coinParticles[i];
+        p.x += p.vx * 0.016;
+        p.y += p.vy * 0.016;
+        p.vy += 80 * 0.016; // Graviti lembut
+        p.life -= 0.016;
+
+        if (p.life <= 0) {
+          coinParticles.splice(i, 1);
+          continue;
+        }
+
+        const alpha = Math.max(0, p.life / p.maxLife);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 2. Kemas kini & lukis floating text (+1 COIN / +5 COINS)
+      for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        const ft = floatingTexts[i];
+        ft.y -= 45 * 0.016; // Bergerak naik ke atas
+        ft.life -= 0.016;
+        ft.opacity = Math.max(0, ft.life);
+
+        if (ft.life <= 0) {
+          floatingTexts.splice(i, 1);
+          continue;
+        }
+
+        ctx.save();
+        ctx.globalAlpha = ft.opacity;
+        ctx.font = "black 18px 'Orbitron', monospace, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillStyle = ft.color;
+        ctx.shadowColor = ft.color;
+        ctx.shadowBlur = 8;
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+      }
+    }
+
+    // Cache imej SVG kereta
+    const carImageCache = {};
+    function getOrCreateCarImage(carData) {
+      const key = `${carData.id}_${isBoosting}`;
+      if (!carImageCache[key]) {
+        const svgStr = getCarSvgString(carData);
+        const img = new Image();
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
+        carImageCache[key] = img;
+      }
+      return carImageCache[key];
+    }
+
+    function renderSpeedLines(w, h, horizon) {
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < 15; i++) {
+        const x1 = Math.random() * w;
+        const y1 = horizon + Math.random() * (h - horizon);
+        const len = 40 + Math.random() * 80;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x1 + (Math.random() - 0.5) * 20, y1 + len);
+        ctx.stroke();
+      }
+    }
+
+    let currentQuizData = null;
+
+    function triggerFinishLine() {
+      isRacing = false;
+      audio.playFinish();
+
+      const timeTakenSec = Math.floor((Date.now() - lapStartTime) / 1000);
+      const min = Math.floor(timeTakenSec / 60).toString().padStart(2, '0');
+      const sec = (timeTakenSec % 60).toString().padStart(2, '0');
+
+      // Buka Knowledge Checkpoint Kuiz
+      document.getElementById("hudOverlay").classList.add("hidden");
+      openKnowledgeCheckpoint(activeLevelIndex, `${min}:${sec}`);
+    }
+
+    function handleGameOver() {
+      isRacing = false;
+      if (animFrameId) {
+        cancelAnimationFrame(animFrameId);
+        animFrameId = null;
+      }
+      audio.playCrash();
+
+      document.getElementById("hudOverlay").classList.add("hidden");
+      document.getElementById("summaryTrophyIcon").innerText = "💥";
+      document.getElementById("summaryTitle").innerText = "KERETA MUSNAH!";
+      document.getElementById("summarySubtitle").innerText = "Kenderaan anda mengalami kerosakan teruk. Jom belajar & cuba lagi!";
+      document.getElementById("summaryStars").innerText = "🖤🖤🖤";
+
+      document.getElementById("summaryCoins").innerText = "+0 🪙";
+      document.getElementById("summaryScore").innerText = gameState.score;
+      document.getElementById("summaryTime").innerText = "--:--";
+
+      document.getElementById("btnSummaryNext").classList.add("hidden");
+      
+      const retryBtn = document.getElementById("btnSummaryRetry");
+      const homeBtn = document.getElementById("btnSummaryHome");
+      
+      retryBtn.classList.remove("hidden");
+      retryBtn.onclick = (e) => {
+        if (e) e.stopPropagation();
+        restartCurrentLevel();
+      };
+      
+      homeBtn.onclick = (e) => {
+        if (e) e.stopPropagation();
+        returnToMainMenu();
+      };
+
+      document.getElementById("levelSummaryModal").classList.remove("hidden");
+    }
+
+    // Fungsi Khas: Restart Level Semasa (Mengekalkan Tahap & Mereset State Litar Sahaja)
+    function restartCurrentLevel() {
+      // Hentikan sebarang loop atau timer
+      isRacing = false;
+      if (animFrameId) {
+        cancelAnimationFrame(animFrameId);
+        animFrameId = null;
+      }
+      if (coinCountAnimTimer) {
+        clearInterval(coinCountAnimTimer);
+        coinCountAnimTimer = null;
+      }
+
+      // Reset syiling larian semasa kepada nilai asal sebelum perlumbaan
+      gameState.coins = runInitialCoins;
+      displayedCoinCount = runInitialCoins;
+
+      // Sembunyikan Game Over / Summary Modal
+      document.getElementById("levelSummaryModal").classList.add("hidden");
+
+      // Mulakan semula sesi pada LEVEL YANG SAMA tanpa reset ke Level 1
+      startRacingSession(activeLevelIndex);
+    }
+
+    // Fungsi Khas: Kembali ke Menu Utama
+    function returnToMainMenu() {
+      isRacing = false;
+      if (animFrameId) {
+        cancelAnimationFrame(animFrameId);
+        animFrameId = null;
+      }
+      if (coinCountAnimTimer) {
+        clearInterval(coinCountAnimTimer);
+        coinCountAnimTimer = null;
+      }
+
+      // Reset syiling larian semasa jika gagal/keluar
+      gameState.coins = runInitialCoins;
+      displayedCoinCount = runInitialCoins;
+
+      // Sembunyikan semua modal & hud
+      document.getElementById("levelSummaryModal").classList.add("hidden");
+      document.getElementById("hudOverlay").classList.add("hidden");
+      document.getElementById("quizModal").classList.add("hidden");
+      document.getElementById("worldMapModal").classList.add("hidden");
+      document.getElementById("garageModal").classList.add("hidden");
+      document.getElementById("championModal").classList.add("hidden");
+
+      // Buka skrin menu utama
+      document.getElementById("homeScreen").classList.remove("hidden");
+
+      // Lukis semula latar belakang menu
+      resizeCanvas();
+      ctx.fillStyle = "#020617";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      renderWorldSky(canvas.width, canvas.height * 0.44);
+      renderRoadway(canvas.width, canvas.height, canvas.height * 0.44);
+    }
+
+    function openKnowledgeCheckpoint(lvlNum, timeStr) {
+      const levelData = RPT_DATABASE[`level${lvlNum}`] || RPT_DATABASE.level1;
+      const questionBank = levelData.questions;
+
+      // Anti-repetition: pilih soalan yang belum digunakan
+      if (!gameState.usedQuestionIndices[lvlNum]) {
+        gameState.usedQuestionIndices[lvlNum] = [];
+      }
+      let availableIndices = [];
+      for (let i = 0; i < questionBank.length; i++) {
+        if (!gameState.usedQuestionIndices[lvlNum].includes(i)) {
+          availableIndices.push(i);
+        }
+      }
+      // Jika semua sudah diguna, reset tracker untuk level ini
+      if (availableIndices.length === 0) {
+        gameState.usedQuestionIndices[lvlNum] = [];
+        availableIndices = questionBank.map((_, idx) => idx);
+      }
+
+      const chosenIdx = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+      gameState.usedQuestionIndices[lvlNum].push(chosenIdx);
+
+      currentQuizData = {
+        ...questionBank[chosenIdx],
+        levelNum: lvlNum,
+        raceTimeStr: timeStr,
+        answered: false
+      };
+
+      // Paparkan Butiran Soalan dalam Jawi
+      const jawiDigits = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩", "١٠"];
+      const levelJawiStr = levelData.worldJawi || `ليۏل ${jawiDigits[lvlNum] || lvlNum}`;
+      document.getElementById("quizBadgeLevel").innerText = levelJawiStr;
+      document.getElementById("quizStandardKandungan").innerText = `بيدڠ: ${currentQuizData.bidang} (${currentQuizData.minggu})`;
+      document.getElementById("quizDifficultyTag").innerText = currentQuizData.tahapKesukaran;
+      document.getElementById("quizQuestionText").innerText = currentQuizData.soalan;
+
+      const jawiContainer = document.getElementById("quizJawiSnippet");
+      if (currentQuizData.jawi && currentQuizData.jawi.trim().length > 0) {
+        jawiContainer.innerText = currentQuizData.jawi;
+        jawiContainer.classList.remove("hidden");
+      } else {
+        jawiContainer.classList.add("hidden");
+        jawiContainer.innerText = "";
+      }
+
+      // Sediakan Pilihan Jawapan Jawi Sepenuhnya (Jawapan betul tidak didedahkan)
+      const optContainer = document.getElementById("quizOptionsContainer");
+      optContainer.innerHTML = "";
+
+      const jawiLetters = ["ا", "ب", "ج", "د"];
+
+      currentQuizData.pilihanJawapan.forEach((optText, optIdx) => {
+        const btn = document.createElement("button");
+        btn.className = "w-full text-right p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-cyan-400 text-white font-semibold text-sm md:text-base flex flex-row-reverse items-center justify-between transition-all active:scale-98 font-jawi cursor-pointer";
+        btn.innerHTML = `
+          <div class="flex flex-row-reverse items-center gap-3">
+            <span class="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-amber-300 text-sm font-sans">${jawiLetters[optIdx] || String.fromCharCode(65 + optIdx)}</span>
+            <span class="tracking-wide">${optText}</span>
+          </div>
+        `;
+        btn.onclick = () => selectQuizAnswer(optIdx, btn);
+        optContainer.appendChild(btn);
+      });
+
+      // Pastikan Kotak Maklum Balas Penerangan dan Butang Tersembunyi sebelum murid memilih
+      const feedbackBox = document.getElementById("quizFeedbackBox");
+      feedbackBox.classList.add("hidden");
+      feedbackBox.innerHTML = `
+        <div id="quizFeedbackTitle" class="font-bold text-base md:text-lg flex items-center gap-2 mb-1.5"></div>
+        <div class="text-xs text-slate-400 mb-0.5 font-bold">ڤنرڠن:</div>
+        <p id="quizFeedbackExplanation" class="text-sm md:text-base text-slate-200 leading-relaxed"></p>
+      `;
+
+      document.getElementById("btnQuizAction").classList.add("hidden");
+      document.getElementById("quizModal").classList.remove("hidden");
+    }
+
+    function selectQuizAnswer(selectedIndex, selectedBtn) {
+      if (!currentQuizData || currentQuizData.answered) return;
+      currentQuizData.answered = true;
+
+      const isCorrect = (selectedIndex === currentQuizData.jawapanBetul);
+      const feedbackBox = document.getElementById("quizFeedbackBox");
+      const feedbackTitle = document.getElementById("quizFeedbackTitle");
+      const feedbackExp = document.getElementById("quizFeedbackExplanation");
+      const actionBtn = document.getElementById("btnQuizAction");
+
+      // Kemas kini Metrik Analitik
+      gameState.quizStats.totalQuestions++;
+      const domainKey = currentQuizData.bidang;
+      if (!gameState.quizStats.domainsMastery[domainKey]) {
+        gameState.quizStats.domainsMastery[domainKey] = { correct: 0, total: 0 };
+      }
+      gameState.quizStats.domainsMastery[domainKey].total++;
+
+      // Kunci semua pilihan jawapan supaya tidak boleh ditekan lagi
+      const optButtons = document.querySelectorAll("#quizOptionsContainer button");
+      optButtons.forEach(b => b.classList.add("pointer-events-none"));
+
+      if (isCorrect) {
+        audio.playCorrect();
+        gameState.quizStats.correctAnswers++;
+        gameState.quizStats.domainsMastery[domainKey].correct++;
+        gameState.coins += 50;
+        gameState.score += 250;
+
+        feedbackBox.className = "rounded-2xl p-4 my-2 border border-emerald-500/50 bg-emerald-950/70 font-jawi";
+        feedbackTitle.className = "font-bold text-emerald-400 text-base md:text-lg flex flex-row-reverse items-center justify-start gap-2 mb-1.5";
+        feedbackTitle.innerHTML = "<span>🎉 جـواڤن بتول!</span> <span class='text-xs bg-emerald-900/60 text-emerald-300 px-2 py-0.5 rounded'>+٥٠ کوءين 🪙</span>";
+        feedbackExp.innerText = currentQuizData.penerangan;
+
+        selectedBtn.classList.remove("bg-slate-900/90", "border-slate-700/80");
+        selectedBtn.classList.add("bg-emerald-900/60", "border-emerald-400", "neon-box-green");
+
+        // Buka Level seterusnya
+        if (currentQuizData.levelNum < 10) {
+          const nextLvl = currentQuizData.levelNum + 1;
+          if (!gameState.unlockedLevels.includes(nextLvl)) {
+            gameState.unlockedLevels.push(nextLvl);
+          }
+        }
+
+        saveGameProgress();
+
+        actionBtn.innerText = (currentQuizData.levelNum === 10) ? "ليهت کڤوتوسن جوارا 🏆" : "تروسکن ک ليۏل ستروسڽ ➔";
+        actionBtn.onclick = () => {
+          document.getElementById("quizModal").classList.add("hidden");
+          if (currentQuizData.levelNum === 10) {
+            showChampionScreen();
+          } else {
+            showLevelSummary(true);
+          }
+        };
+      } else {
+        audio.playWrong();
+        gameState.quizStats.wrongAnswers++;
+
+        feedbackBox.className = "rounded-2xl p-4 my-2 border border-rose-500/50 bg-rose-950/70 font-jawi";
+        feedbackTitle.className = "font-bold text-rose-400 text-base md:text-lg flex flex-row-reverse items-center justify-start gap-2 mb-1.5";
+        feedbackTitle.innerHTML = "<span>❌ جـواڤن کمو بلوم بتول. کوبا لاݢي!</span>";
+        feedbackExp.innerHTML = `<span class="text-rose-200 block mb-1">جواڤن سبنر ياله: <strong>${currentQuizData.pilihanJawapan[currentQuizData.jawapanBetul]}</strong>.</span><span class="text-slate-300 block">${currentQuizData.penerangan}</span>`;
+
+        selectedBtn.classList.remove("bg-slate-900/90", "border-slate-700/80");
+        selectedBtn.classList.add("bg-rose-950/80", "border-rose-500");
+
+        saveGameProgress();
+
+        actionBtn.innerText = "🔄 اولڠ ليۏل اين";
+        actionBtn.onclick = () => {
+          document.getElementById("quizModal").classList.add("hidden");
+          startRacingSession(currentQuizData.levelNum);
+        };
+      }
+
+      feedbackBox.classList.remove("hidden");
+      actionBtn.classList.remove("hidden");
+    }
+
+    function showLevelSummary(isSuccess) {
+      document.getElementById("summaryTrophyIcon").innerText = "🏁";
+      document.getElementById("summaryTitle").innerText = "LEVEL SELESAI!";
+      document.getElementById("summarySubtitle").innerText = `Hebat! Anda telah menakluki Level ${activeLevelIndex}`;
+      document.getElementById("summaryStars").innerText = (health === 3) ? "⭐⭐⭐" : (health === 2 ? "⭐⭐" : "⭐");
+
+      document.getElementById("summaryCoins").innerText = `+${50 + health * 10} 🪙`;
+      document.getElementById("summaryScore").innerText = gameState.score;
+      document.getElementById("summaryTime").innerText = currentQuizData ? currentQuizData.raceTimeStr : "01:15";
+
+      const nextBtn = document.getElementById("btnSummaryNext");
+      if (activeLevelIndex < 10) {
+        nextBtn.classList.remove("hidden");
+        nextBtn.onclick = (e) => {
+          if (e) e.stopPropagation();
+          document.getElementById("levelSummaryModal").classList.add("hidden");
+          startRacingSession(activeLevelIndex + 1);
+        };
+      } else {
+        nextBtn.classList.add("hidden");
+      }
+
+      document.getElementById("btnSummaryRetry").onclick = (e) => {
+        if (e) e.stopPropagation();
+        restartCurrentLevel();
+      };
+      document.getElementById("btnSummaryHome").onclick = (e) => {
+        if (e) e.stopPropagation();
+        returnToMainMenu();
+      };
+
+      document.getElementById("levelSummaryModal").classList.remove("hidden");
+    }
+
+    function showChampionScreen() {
+      document.getElementById("championPlayerName").innerText = gameState.studentName;
+      document.getElementById("championCoins").innerText = `${gameState.coins} 🪙`;
+      document.getElementById("championScore").innerText = gameState.score;
+
+      const totalQ = gameState.quizStats.totalQuestions || 1;
+      const correctQ = gameState.quizStats.correctAnswers || 1;
+      const acc = Math.round((correctQ / totalQ) * 100);
+      document.getElementById("championAccuracy").innerText = `${acc}%`;
+
+      // Domain badges
+      const domainContainer = document.getElementById("championDomainAnalysis");
+      domainContainer.innerHTML = "";
+      for (const [dom, stat] of Object.entries(gameState.quizStats.domainsMastery)) {
+        if (stat.total > 0) {
+          const domAcc = Math.round((stat.correct / stat.total) * 100);
+          const badge = document.createElement("span");
+          badge.className = "px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] text-cyan-300";
+          badge.innerText = `${dom}: ${domAcc}%`;
+          domainContainer.appendChild(badge);
+        }
+      }
+
+      document.getElementById("championModal").classList.remove("hidden");
+    }
+
+    function renderWorldMapGrid() {
+      const grid = document.getElementById("levelGridContainer");
+      grid.innerHTML = "";
+
+      for (let i = 1; i <= 10; i++) {
+        const lvlData = RPT_DATABASE[`level${i}`] || RPT_DATABASE.level1;
+        const isUnlocked = gameState.unlockedLevels.includes(i);
+        const card = document.createElement("div");
+        
+        card.className = `p-4 rounded-2xl flex flex-col justify-between border transition-all ${
+          isUnlocked 
+            ? "glass-panel border-cyan-500/40 hover:border-amber-400 hover:scale-[1.02] cursor-pointer" 
+            : "bg-slate-900/60 border-slate-800 opacity-60 cursor-not-allowed"
+        }`;
+
+        card.innerHTML = `
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <span class="font-arcade text-xs font-black ${isUnlocked ? 'text-amber-300' : 'text-slate-500'}">LV.${i}</span>
+              <span class="text-sm">${isUnlocked ? (i === 10 ? '🏆' : '🏁') : '🔒'}</span>
+            </div>
+            <h4 class="font-arcade text-xs md:text-sm font-bold text-white leading-tight">${lvlData.world}</h4>
+            <p class="text-[10px] text-cyan-300 mt-1">${lvlData.bidang}</p>
+          </div>
+          <div class="mt-3 pt-2 border-t border-slate-800 flex justify-between items-center text-[10px]">
+            <span class="text-slate-400">${lvlData.questions[0].tahapKesukaran}</span>
+            ${isUnlocked ? '<span class="text-emerald-400 font-bold">MAIN ▶</span>' : '<span class="text-slate-500">KUNCI</span>'}
+          </div>
+        `;
+
+        if (isUnlocked) {
+          card.onclick = () => {
+            document.getElementById("worldMapModal").classList.add("hidden");
+            startRacingSession(i);
+          };
+        }
+        grid.appendChild(card);
+      }
+
+      document.getElementById("mapProgressSummary").innerText = `Kemajuan: ${gameState.unlockedLevels.length}/10 Level Terbuka`;
+    }
+
+    let selectedGarageCarId = "speed_racer";
+
+    function updateGarageView() {
+      document.getElementById("garageCoinDisplay").innerText = gameState.coins;
+      const car = CARS_DATABASE.find(c => c.id === selectedGarageCarId) || CARS_DATABASE[0];
+      const upgradeLv = gameState.carUpgradeLevels[car.id] || 0;
+      const isUnlocked = gameState.unlockedCarIds.includes(car.id);
+      const isSelected = (gameState.selectedCarId === car.id);
+
+      // SVG Preview
+      document.getElementById("garageCarPreviewSvg").innerHTML = getCarSvgString(car, 220, 140);
+      document.getElementById("garageCarName").innerText = car.name;
+
+      const badge = document.getElementById("garageCarStatusBadge");
+      if (isSelected) {
+        badge.innerText = "DIPILIH";
+        badge.className = "text-[10px] font-arcade px-3 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/40 mt-1";
+      } else if (isUnlocked) {
+        badge.innerText = "DIMILIKI";
+        badge.className = "text-[10px] font-arcade px-3 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-500/40 mt-1";
+      } else {
+        badge.innerText = `KUNCI (🪙 ${car.price})`;
+        badge.className = "text-[10px] font-arcade px-3 py-0.5 rounded-full bg-amber-950 text-amber-400 border border-amber-500/40 mt-1";
+      }
+
+      // Hitung Stat Sebenar termasuk Upgrade
+      const currentSpeed = Math.min(100, car.stats.speed + upgradeLv * 5);
+      const currentAccel = Math.min(100, car.stats.accel + upgradeLv * 5);
+      const currentHandling = Math.min(100, car.stats.handling + upgradeLv * 5);
+      const currentBoost = Math.min(100, car.stats.boost + upgradeLv * 5);
+
+      document.getElementById("statSpeedVal").innerText = `${currentSpeed}%`;
+      document.getElementById("statSpeedBar").style.width = `${currentSpeed}%`;
+
+      document.getElementById("statAccelVal").innerText = `${currentAccel}%`;
+      document.getElementById("statAccelBar").style.width = `${currentAccel}%`;
+
+      document.getElementById("statHandlingVal").innerText = `${currentHandling}%`;
+      document.getElementById("statHandlingBar").style.width = `${currentHandling}%`;
+
+      document.getElementById("statBoostVal").innerText = `${currentBoost}%`;
+      document.getElementById("statBoostBar").style.width = `${currentBoost}%`;
+
+      // Butang Pilih / Beli
+      const btnSelect = document.getElementById("btnSelectCar");
+      if (isSelected) {
+        btnSelect.innerText = "SEDANG DIGUNAKAN";
+        btnSelect.className = "py-2.5 px-5 rounded-xl bg-slate-800 text-slate-500 font-arcade font-bold text-xs cursor-default";
+      } else if (isUnlocked) {
+        btnSelect.innerText = "PILIH JENTERA";
+        btnSelect.className = "py-2.5 px-5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-arcade font-bold text-xs";
+      } else {
+        btnSelect.innerText = `BUKA (🪙 ${car.price})`;
+        btnSelect.className = "py-2.5 px-5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-arcade font-bold text-xs";
+      }
+
+      // Senarai Butang Mini Kereta
+      const row = document.getElementById("garageCarSelectorRow");
+      row.innerHTML = "";
+      CARS_DATABASE.forEach(c => {
+        const miniBtn = document.createElement("button");
+        const isOwned = gameState.unlockedCarIds.includes(c.id);
+        const isCurrent = (c.id === selectedGarageCarId);
+        miniBtn.className = `p-2 rounded-xl flex flex-col items-center justify-center border transition-all ${
+          isCurrent 
+            ? "bg-slate-800 border-amber-400 scale-105" 
+            : "bg-slate-900 border-slate-800 hover:border-slate-700"
+        }`;
+        miniBtn.innerHTML = `
+          <div class="w-8 h-4 rounded" style="background:${c.color};"></div>
+          <span class="text-[9px] font-arcade mt-1 text-slate-300 truncate w-full text-center">${c.name.split(' ')[0]}</span>
+          <span class="text-[8px] text-slate-500">${isOwned ? '✓' : '🔒'}</span>
+        `;
+        miniBtn.onclick = () => {
+          selectedGarageCarId = c.id;
+          updateGarageView();
+        };
+        row.appendChild(miniBtn);
+      });
+    }
+
+    // Naik Taraf Kereta
+    document.getElementById("btnUpgradeCar").onclick = () => {
+      const car = CARS_DATABASE.find(c => c.id === selectedGarageCarId);
+      if (!gameState.unlockedCarIds.includes(car.id)) {
+        return;
+      }
+      if (gameState.coins >= 100) {
+        gameState.coins -= 100;
+        gameState.carUpgradeLevels[car.id] = (gameState.carUpgradeLevels[car.id] || 0) + 1;
+        audio.playCoin();
+        saveGameProgress();
+        updateGarageView();
+      }
+    };
+
+    // Pilih / Buka Kereta
+    document.getElementById("btnSelectCar").onclick = () => {
+      const car = CARS_DATABASE.find(c => c.id === selectedGarageCarId);
+      if (gameState.unlockedCarIds.includes(car.id)) {
+        gameState.selectedCarId = car.id;
+        saveGameProgress();
+        updateGarageView();
+      } else {
+        // Beli Kereta
+        if (gameState.coins >= car.price) {
+          gameState.coins -= car.price;
+          gameState.unlockedCarIds.push(car.id);
+          gameState.selectedCarId = car.id;
+          audio.playCoin();
+          saveGameProgress();
+          updateGarageView();
+        }
+      }
+    };
+
+    function renderTeacherDashboard() {
+      document.getElementById("teacherStudentName").innerText = gameState.studentName;
+      document.getElementById("teacherCurrentLevel").innerText = `Level ${Math.max(...gameState.unlockedLevels)}`;
+      document.getElementById("teacherTotalScore").innerText = gameState.score;
+
+      const total = gameState.quizStats.totalQuestions || 0;
+      const correct = gameState.quizStats.correctAnswers || 0;
+      const acc = total > 0 ? Math.round((correct / total) * 100) : 0;
+      document.getElementById("teacherAccuracy").innerText = `${acc}% (${correct}/${total})`;
+
+      const listContainer = document.getElementById("teacherDomainList");
+      listContainer.innerHTML = "";
+
+      for (const [domName, val] of Object.entries(gameState.quizStats.domainsMastery)) {
+        const item = document.createElement("div");
+        item.className = "flex justify-between items-center p-2 rounded-xl bg-slate-950/60 border border-slate-800";
+        const percent = val.total > 0 ? Math.round((val.correct / val.total) * 100) : 0;
+        item.innerHTML = `
+          <div>
+            <span class="font-bold text-white">${domName}</span>
+            <span class="text-[10px] text-slate-400 ml-2">(${val.correct}/${val.total} Betul)</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-20 bg-slate-800 h-2 rounded-full overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-cyan-400 to-emerald-400" style="width: ${percent}%;"></div>
+            </div>
+            <span class="font-arcade text-[11px] font-bold ${percent >= 70 ? 'text-emerald-400' : (percent > 0 ? 'text-amber-400' : 'text-slate-500')}">${percent}%</span>
+          </div>
+        `;
+        listContainer.appendChild(item);
+      }
+    }
+
+    document.getElementById("btnResetProgress").onclick = () => {
+      gameState = { ...defaultGameState };
+      saveGameProgress();
+      renderTeacherDashboard();
+      updateGarageView();
+      renderWorldMapGrid();
+    };
+
+    // KEYBOARD INPUT: HANYA KAWAL KIRI & KANAN
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
+        keys.left = true;
+      }
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
+        keys.right = true;
+      }
+    });
+
+    window.addEventListener("keyup", (e) => {
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
+        keys.left = false;
+      }
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
+        keys.right = false;
+      }
+    });
+
+    // Touch & Pointer Controls Binding: HANYA KIRI & KANAN (Disesuaikan untuk Semua Peranti)
+    function bindSteerButton(elementId, keyProp) {
+      const btn = document.getElementById(elementId);
+      if (!btn) return;
+
+      const press = (e) => {
+        if (e.cancelable) e.preventDefault();
+        keys[keyProp] = true;
+      };
+
+      const release = (e) => {
+        if (e && e.cancelable) e.preventDefault();
+        keys[keyProp] = false;
+      };
+
+      // Pointer events menyokong skrin sentuh, pen dan tetikus secara serentak
+      btn.addEventListener("pointerdown", press, { passive: false });
+      btn.addEventListener("pointerup", release, { passive: false });
+      btn.addEventListener("pointercancel", release, { passive: false });
+      btn.addEventListener("pointerleave", release, { passive: false });
+
+      // Fallback touch events untuk peranti mudah alih lama
+      btn.addEventListener("touchstart", press, { passive: false });
+      btn.addEventListener("touchend", release, { passive: false });
+      btn.addEventListener("touchcancel", release, { passive: false });
+
+      // Fallback mouse events
+      btn.addEventListener("mousedown", press);
+      btn.addEventListener("mouseup", release);
+      btn.addEventListener("mouseleave", release);
+      btn.addEventListener("contextmenu", (e) => e.preventDefault());
+    }
+
+    bindSteerButton("touchLeft", "left");
+    bindSteerButton("touchRight", "right");
+
+    // Pengikatan Global Event Listener untuk Butang Summary / Game Over
+    const summaryRetryBtn = document.getElementById("btnSummaryRetry");
+    const summaryHomeBtn = document.getElementById("btnSummaryHome");
+
+    if (summaryRetryBtn) {
+      summaryRetryBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        restartCurrentLevel();
+      });
+      summaryRetryBtn.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        restartCurrentLevel();
+      }, { passive: false });
+    }
+
+    if (summaryHomeBtn) {
+      summaryHomeBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        returnToMainMenu();
+      });
+      summaryHomeBtn.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        returnToMainMenu();
+      }, { passive: false });
+    }
+
+    document.getElementById("btnPlayGame").onclick = () => {
+      const nameInput = document.getElementById("playerNameInput").value.trim();
+      if (nameInput) gameState.studentName = nameInput;
+      saveGameProgress();
+      renderWorldMapGrid();
+      document.getElementById("worldMapModal").classList.remove("hidden");
+    };
+
+    document.getElementById("btnOpenGarage").onclick = () => {
+      selectedGarageCarId = gameState.selectedCarId;
+      updateGarageView();
+      document.getElementById("garageModal").classList.remove("hidden");
+    };
+
+    document.getElementById("btnCloseGarage").onclick = () => {
+      document.getElementById("garageModal").classList.add("hidden");
+    };
+
+    document.getElementById("btnOpenWorldMap").onclick = () => {
+      renderWorldMapGrid();
+      document.getElementById("worldMapModal").classList.remove("hidden");
+    };
+
+    document.getElementById("btnCloseWorldMap").onclick = () => {
+      document.getElementById("worldMapModal").classList.add("hidden");
+    };
+
+    document.getElementById("btnAudioToggle").onclick = () => {
+      audio.enabled = !audio.enabled;
+      document.getElementById("audioStatusText").innerText = audio.enabled ? "ON" : "OFF";
+      if (audio.enabled) audio.init();
+    };
+
+    document.getElementById("btnOpenTeacherMode").onclick = () => {
+      renderTeacherDashboard();
+      document.getElementById("teacherModal").classList.remove("hidden");
+    };
+
+    document.getElementById("btnCloseTeacherMode").onclick = () => {
+      document.getElementById("teacherModal").classList.add("hidden");
+    };
+
+    document.getElementById("btnCloseTeacherBottom").onclick = () => {
+      document.getElementById("teacherModal").classList.add("hidden");
+    };
+
+    document.getElementById("btnChampionRestart").onclick = () => {
+      document.getElementById("championModal").classList.add("hidden");
+      document.getElementById("homeScreen").classList.remove("hidden");
+    };
+
+    window.onload = function () {
+      loadSavedGame();
+      document.getElementById("playerNameInput").value = gameState.studentName;
+      document.getElementById("playerNameInput").addEventListener("input", (e) => {
+        gameState.studentName = e.target.value;
+        saveGameProgress();
+      });
+
+      // Pratonton Render Latar Belakang Home
+      resizeCanvas();
+      ctx.fillStyle = "#020617";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      renderWorldSky(canvas.width, canvas.height * 0.44);
+      renderRoadway(canvas.width, canvas.height, canvas.height * 0.44);
+    };
+  </script>
+</body>
+</html>
